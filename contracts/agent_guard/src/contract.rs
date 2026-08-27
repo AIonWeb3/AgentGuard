@@ -32,7 +32,7 @@
 //! extension window.
 
 use crate::errors::Error;
-use crate::types::{AgentRecord, AgentStatus, DataKey, Role};
+use crate::types::{AgentMetadata, AgentRecord, AgentStatus, DataKey, Role};
 use soroban_sdk::{contract, contractimpl, Address, Env, Vec};
 
 // ---------------------------------------------------------------------------
@@ -102,7 +102,12 @@ impl AgentGuardContract {
     /// # Errors
     /// - `Error::NotInitialized` if the contract hasn't been initialized.
     /// - `Error::AgentAlreadyRegistered` if `agent_id` is already registered.
-    pub fn register_agent(env: Env, owner: Address, agent_id: Address) -> Result<(), Error> {
+    pub fn register_agent(
+        env: Env,
+        owner: Address,
+        agent_id: Address,
+        metadata: AgentMetadata,
+    ) -> Result<(), Error> {
         Self::require_initialized(&env)?;
 
         // Only the owner can register agents under their account
@@ -123,6 +128,9 @@ impl AgentGuardContract {
 
         // Store the agent record
         Self::write_agent(&env, agent_id.clone(), &record);
+
+        // Store the metadata
+        Self::write_metadata(&env, agent_id.clone(), &metadata);
 
         // Add agent to owner's agent list
         let mut agents = Self::read_owner_agents(&env, owner.clone());
@@ -151,6 +159,9 @@ impl AgentGuardContract {
 
         // Remove the agent record
         Self::remove_agent(&env, agent_id.clone());
+
+        // Remove the metadata
+        Self::remove_metadata(&env, agent_id.clone());
 
         // Remove from owner's agent list
         let agents = Self::read_owner_agents(&env, owner.clone());
@@ -391,6 +402,17 @@ impl AgentGuardContract {
     // =======================================================================
     // Internal Storage Helpers
     // =======================================================================
+
+    fn write_metadata(env: &Env, agent_id: Address, metadata: &AgentMetadata) {
+        let key = DataKey::AgentMetadata(agent_id);
+        env.storage().persistent().set(&key, metadata);
+        env.storage().persistent().extend_ttl(&key, TTL_THRESHOLD, TTL_EXTEND_TO);
+    }
+
+    fn remove_metadata(env: &Env, agent_id: Address) {
+        let key = DataKey::AgentMetadata(agent_id);
+        env.storage().persistent().remove(&key);
+    }
 
     fn read_agent(env: &Env, agent_id: Address) -> Result<AgentRecord, Error> {
         let key = DataKey::Agent(agent_id);
