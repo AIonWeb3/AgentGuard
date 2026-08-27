@@ -14,7 +14,7 @@
 //! **Temporary storage is intentionally avoided.** Agent identities are long-lived
 //! credentials — not ephemeral data like price feeds or session tokens.
 
-use soroban_sdk::{contracttype, Address, Vec};
+use soroban_sdk::{contracttype, Address, String, Vec};
 
 // ---------------------------------------------------------------------------
 // Roles
@@ -74,6 +74,22 @@ pub struct AgentRecord {
     pub status: AgentStatus,
     /// Ledger timestamp at which the agent was first registered.
     pub registered_at: u64,
+}
+
+// ---------------------------------------------------------------------------
+// Agent Metadata
+// ---------------------------------------------------------------------------
+
+/// Metadata associated with an agent.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AgentMetadata {
+    /// Name of the agent.
+    pub name: String,
+    /// Description of the agent's purpose.
+    pub description: String,
+    /// Version of the agent.
+    pub version: u32,
 }
 
 // ---------------------------------------------------------------------------
