@@ -109,8 +109,7 @@ impl AgentGuardContract {
         owner.require_auth();
 
         // Guard: prevent duplicate registration
-        let agent_key = DataKey::Agent(agent_id.clone());
-        if env.storage().persistent().has(&agent_key) {
+        if Self::has_agent(&env, agent_id.clone()) {
             return Err(Error::AgentAlreadyRegistered);
         }
 
@@ -123,16 +122,12 @@ impl AgentGuardContract {
         };
 
         // Store the agent record
-        env.storage().persistent().set(&agent_key, &record);
-        env.storage().persistent().extend_ttl(&agent_key, TTL_THRESHOLD, TTL_EXTEND_TO);
+        Self::write_agent(&env, agent_id.clone(), &record);
 
         // Add agent to owner's agent list
-        let owner_key = DataKey::OwnerAgents(owner);
-        let mut agents: Vec<Address> =
-            env.storage().persistent().get(&owner_key).unwrap_or(Vec::new(&env));
+        let mut agents = Self::read_owner_agents(&env, owner.clone());
         agents.push_back(agent_id);
-        env.storage().persistent().set(&owner_key, &agents);
-        env.storage().persistent().extend_ttl(&owner_key, TTL_THRESHOLD, TTL_EXTEND_TO);
+        Self::write_owner_agents(&env, owner, &agents);
 
         Ok(())
     }
@@ -147,9 +142,7 @@ impl AgentGuardContract {
         Self::require_initialized(&env)?;
         owner.require_auth();
 
-        let agent_key = DataKey::Agent(agent_id.clone());
-        let record: AgentRecord =
-            env.storage().persistent().get(&agent_key).ok_or(Error::AgentNotFound)?;
+        let record = Self::read_agent(&env, agent_id.clone())?;
 
         // Only the registered owner can deregister
         if record.owner != owner {
@@ -157,24 +150,17 @@ impl AgentGuardContract {
         }
 
         // Remove the agent record
-        env.storage().persistent().remove(&agent_key);
+        Self::remove_agent(&env, agent_id.clone());
 
         // Remove from owner's agent list
-        let owner_key = DataKey::OwnerAgents(owner);
-        if let Some(agents) = env.storage().persistent().get::<_, Vec<Address>>(&owner_key) {
-            let mut new_agents = Vec::new(&env);
-            for a in agents.iter() {
-                if a != agent_id {
-                    new_agents.push_back(a);
-                }
-            }
-            if new_agents.is_empty() {
-                env.storage().persistent().remove(&owner_key);
-            } else {
-                env.storage().persistent().set(&owner_key, &new_agents);
-                env.storage().persistent().extend_ttl(&owner_key, TTL_THRESHOLD, TTL_EXTEND_TO);
+        let agents = Self::read_owner_agents(&env, owner.clone());
+        let mut new_agents = Vec::new(&env);
+        for a in agents.iter() {
+            if a != agent_id {
+                new_agents.push_back(a);
             }
         }
+        Self::write_owner_agents(&env, owner, &new_agents);
 
         Ok(())
     }
@@ -201,9 +187,7 @@ impl AgentGuardContract {
         Self::require_initialized(&env)?;
         owner.require_auth();
 
-        let agent_key = DataKey::Agent(agent_id);
-        let mut record: AgentRecord =
-            env.storage().persistent().get(&agent_key).ok_or(Error::AgentNotFound)?;
+        let mut record = Self::read_agent(&env, agent_id.clone())?;
 
         // Ownership check
         if record.owner != owner {
@@ -219,8 +203,7 @@ impl AgentGuardContract {
 
         // Add the role and persist
         record.roles.push_back(role);
-        env.storage().persistent().set(&agent_key, &record);
-        env.storage().persistent().extend_ttl(&agent_key, TTL_THRESHOLD, TTL_EXTEND_TO);
+        Self::write_agent(&env, agent_id, &record);
 
         Ok(())
     }
@@ -240,9 +223,7 @@ impl AgentGuardContract {
         Self::require_initialized(&env)?;
         owner.require_auth();
 
-        let agent_key = DataKey::Agent(agent_id);
-        let mut record: AgentRecord =
-            env.storage().persistent().get(&agent_key).ok_or(Error::AgentNotFound)?;
+        let mut record = Self::read_agent(&env, agent_id.clone())?;
 
         // Ownership check
         if record.owner != owner {
@@ -265,8 +246,7 @@ impl AgentGuardContract {
         }
 
         record.roles = new_roles;
-        env.storage().persistent().set(&agent_key, &record);
-        env.storage().persistent().extend_ttl(&agent_key, TTL_THRESHOLD, TTL_EXTEND_TO);
+        Self::write_agent(&env, agent_id, &record);
 
         Ok(())
     }
@@ -291,9 +271,7 @@ impl AgentGuardContract {
         Self::require_initialized(&env)?;
         owner.require_auth();
 
-        let agent_key = DataKey::Agent(agent_id);
-        let mut record: AgentRecord =
-            env.storage().persistent().get(&agent_key).ok_or(Error::AgentNotFound)?;
+        let mut record = Self::read_agent(&env, agent_id.clone())?;
 
         // Ownership check
         if record.owner != owner {
@@ -301,8 +279,7 @@ impl AgentGuardContract {
         }
 
         record.status = status;
-        env.storage().persistent().set(&agent_key, &record);
-        env.storage().persistent().extend_ttl(&agent_key, TTL_THRESHOLD, TTL_EXTEND_TO);
+        Self::write_agent(&env, agent_id, &record);
 
         Ok(())
     }
@@ -322,10 +299,8 @@ impl AgentGuardContract {
     /// Returns `false` for unregistered agents or missing roles (never panics).
     #[must_use]
     pub fn verify_agent(env: Env, agent_id: Address, required_role: Role) -> bool {
-        let agent_key = DataKey::Agent(agent_id);
-
-        match env.storage().persistent().get::<_, AgentRecord>(&agent_key) {
-            Some(record) => {
+        match Self::read_agent(&env, agent_id) {
+            Ok(record) => {
                 if record.status != AgentStatus::Active {
                     return false;
                 }
@@ -336,7 +311,7 @@ impl AgentGuardContract {
                 }
                 false
             }
-            None => false,
+            Err(_) => false,
         }
     }
 
@@ -349,8 +324,7 @@ impl AgentGuardContract {
     /// # Errors
     /// - `Error::AgentNotFound` if no record exists.
     pub fn get_agent(env: Env, agent_id: Address) -> Result<AgentRecord, Error> {
-        let agent_key = DataKey::Agent(agent_id);
-        env.storage().persistent().get(&agent_key).ok_or(Error::AgentNotFound)
+        Self::read_agent(&env, agent_id)
     }
 
     /// List all agent addresses registered under an owner.
@@ -358,8 +332,7 @@ impl AgentGuardContract {
     /// Returns an empty vector if the owner has no agents.
     #[must_use]
     pub fn get_owner_agents(env: Env, owner: Address) -> Vec<Address> {
-        let owner_key = DataKey::OwnerAgents(owner);
-        env.storage().persistent().get(&owner_key).unwrap_or(Vec::new(&env))
+        Self::read_owner_agents(&env, owner)
     }
 
     // =======================================================================
@@ -383,9 +356,7 @@ impl AgentGuardContract {
         Self::require_initialized(&env)?;
         current_owner.require_auth();
 
-        let agent_key = DataKey::Agent(agent_id.clone());
-        let mut record: AgentRecord =
-            env.storage().persistent().get(&agent_key).ok_or(Error::AgentNotFound)?;
+        let mut record = Self::read_agent(&env, agent_id.clone())?;
 
         if record.owner != current_owner {
             return Err(Error::NotAgentOwner);
@@ -393,33 +364,22 @@ impl AgentGuardContract {
 
         // Update the record's owner
         record.owner = new_owner.clone();
-        env.storage().persistent().set(&agent_key, &record);
-        env.storage().persistent().extend_ttl(&agent_key, TTL_THRESHOLD, TTL_EXTEND_TO);
+        Self::write_agent(&env, agent_id.clone(), &record);
 
         // Remove agent from current owner's list
-        let current_key = DataKey::OwnerAgents(current_owner);
-        if let Some(agents) = env.storage().persistent().get::<_, Vec<Address>>(&current_key) {
-            let mut new_list = Vec::new(&env);
-            for a in agents.iter() {
-                if a != agent_id {
-                    new_list.push_back(a);
-                }
-            }
-            if new_list.is_empty() {
-                env.storage().persistent().remove(&current_key);
-            } else {
-                env.storage().persistent().set(&current_key, &new_list);
-                env.storage().persistent().extend_ttl(&current_key, TTL_THRESHOLD, TTL_EXTEND_TO);
+        let agents = Self::read_owner_agents(&env, current_owner.clone());
+        let mut new_list = Vec::new(&env);
+        for a in agents.iter() {
+            if a != agent_id {
+                new_list.push_back(a);
             }
         }
+        Self::write_owner_agents(&env, current_owner, &new_list);
 
         // Add agent to new owner's list
-        let new_key = DataKey::OwnerAgents(new_owner);
-        let mut new_agents: Vec<Address> =
-            env.storage().persistent().get(&new_key).unwrap_or(Vec::new(&env));
+        let mut new_agents = Self::read_owner_agents(&env, new_owner.clone());
         new_agents.push_back(agent_id);
-        env.storage().persistent().set(&new_key, &new_agents);
-        env.storage().persistent().extend_ttl(&new_key, TTL_THRESHOLD, TTL_EXTEND_TO);
+        Self::write_owner_agents(&env, new_owner, &new_agents);
 
         Ok(())
     }
@@ -427,6 +387,46 @@ impl AgentGuardContract {
     // =======================================================================
     // Internal Helpers
     // =======================================================================
+
+    // =======================================================================
+    // Internal Storage Helpers
+    // =======================================================================
+
+    fn read_agent(env: &Env, agent_id: Address) -> Result<AgentRecord, Error> {
+        let key = DataKey::Agent(agent_id);
+        env.storage().persistent().get(&key).ok_or(Error::AgentNotFound)
+    }
+
+    fn write_agent(env: &Env, agent_id: Address, record: &AgentRecord) {
+        let key = DataKey::Agent(agent_id);
+        env.storage().persistent().set(&key, record);
+        env.storage().persistent().extend_ttl(&key, TTL_THRESHOLD, TTL_EXTEND_TO);
+    }
+
+    fn has_agent(env: &Env, agent_id: Address) -> bool {
+        let key = DataKey::Agent(agent_id);
+        env.storage().persistent().has(&key)
+    }
+
+    fn remove_agent(env: &Env, agent_id: Address) {
+        let key = DataKey::Agent(agent_id);
+        env.storage().persistent().remove(&key);
+    }
+
+    fn read_owner_agents(env: &Env, owner: Address) -> Vec<Address> {
+        let key = DataKey::OwnerAgents(owner);
+        env.storage().persistent().get(&key).unwrap_or(Vec::new(env))
+    }
+
+    fn write_owner_agents(env: &Env, owner: Address, agents: &Vec<Address>) {
+        let key = DataKey::OwnerAgents(owner);
+        if agents.is_empty() {
+            env.storage().persistent().remove(&key);
+        } else {
+            env.storage().persistent().set(&key, agents);
+            env.storage().persistent().extend_ttl(&key, TTL_THRESHOLD, TTL_EXTEND_TO);
+        }
+    }
 
     /// Asserts the contract has been initialized.
     fn require_initialized(env: &Env) -> Result<(), Error> {
