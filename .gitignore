@@ -1,0 +1,18 @@
+# Rust build artifacts
+/target/
+/target_ra/
+/target_build/
+/target_ci/
+/target_test/
+/target_final/
+
+# Node / SDK
+sdk/node_modules/
+sdk/dist/
+
+# IDE
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,14 @@
+[build]
+# Limit parallelism to reduce file contention on Windows
+# when real-time antivirus scanning locks intermediate .rcgu.o files.
+jobs = 1
+
+[profile.dev]
+# Single codegen unit minimizes intermediate object files,
+# reducing the chance of antivirus lock conflicts.
+codegen-units = 1
+incremental = false
+
+[profile.test]
+codegen-units = 1
+incremental = false
