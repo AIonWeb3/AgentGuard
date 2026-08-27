@@ -283,7 +283,7 @@ impl AgentGuardContract {
     ///
     /// Returns `true` if the agent is registered AND holds the `required_role`.
     /// Returns `false` for unregistered agents or missing roles (never panics).
-    #[must_use] 
+    #[must_use]
     pub fn verify_agent(env: Env, agent_id: Address, required_role: Role) -> bool {
         let agent_key = DataKey::Agent(agent_id);
 
@@ -316,7 +316,7 @@ impl AgentGuardContract {
     /// List all agent addresses registered under an owner.
     ///
     /// Returns an empty vector if the owner has no agents.
-    #[must_use] 
+    #[must_use]
     pub fn get_owner_agents(env: Env, owner: Address) -> Vec<Address> {
         let owner_key = DataKey::OwnerAgents(owner);
         env.storage().persistent().get(&owner_key).unwrap_or(Vec::new(&env))

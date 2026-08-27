@@ -3,7 +3,6 @@
 //! Tests cover every public function including success paths, error cases,
 //! and authorization boundary checks.
 
-
 use crate::contract::AgentGuardContractClient;
 use crate::types::Role;
 use soroban_sdk::{testutils::Address as _, Address, Env};
