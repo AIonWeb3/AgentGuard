@@ -14,7 +14,7 @@
 //! **Temporary storage is intentionally avoided.** Agent identities are long-lived
 //! credentials — not ephemeral data like price feeds or session tokens.
 
-use soroban_sdk::{contracttype, Address, Vec};
+use soroban_sdk::{contracttype, Address, String, Vec};
 
 // ---------------------------------------------------------------------------
 // Roles
@@ -77,6 +77,22 @@ pub struct AgentRecord {
 }
 
 // ---------------------------------------------------------------------------
+// Agent Metadata
+// ---------------------------------------------------------------------------
+
+/// Metadata associated with an agent.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AgentMetadata {
+    /// Name of the agent.
+    pub name: String,
+    /// Description of the agent's purpose.
+    pub description: String,
+    /// Version of the agent.
+    pub version: u32,
+}
+
+// ---------------------------------------------------------------------------
 // Storage Keys
 // ---------------------------------------------------------------------------
 
@@ -98,6 +114,10 @@ pub enum DataKey {
     /// Maps an agent's `Address` → `AgentRecord`.
     /// **Storage: Persistent** — long-lived identity data.
     Agent(Address),
+
+    /// Maps an agent's `Address` → `AgentMetadata`.
+    /// **Storage: Persistent** — descriptive information about the agent.
+    AgentMetadata(Address),
 
     /// Maps an owner's `Address` → `Vec<Address>` of their registered agents.
     /// **Storage: Persistent** — enables enumeration of all agents per owner.
