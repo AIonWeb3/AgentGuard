@@ -115,6 +115,10 @@ pub enum DataKey {
     /// **Storage: Persistent** — long-lived identity data.
     Agent(Address),
 
+    /// Maps an agent's `Address` → `AgentMetadata`.
+    /// **Storage: Persistent** — descriptive information about the agent.
+    AgentMetadata(Address),
+
     /// Maps an owner's `Address` → `Vec<Address>` of their registered agents.
     /// **Storage: Persistent** — enables enumeration of all agents per owner.
     OwnerAgents(Address),
