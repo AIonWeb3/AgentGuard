@@ -4,7 +4,7 @@
 //! and authorization boundary checks.
 
 use crate::contract::AgentGuardContractClient;
-use crate::types::Role;
+use crate::types::{AgentStatus, Role};
 use soroban_sdk::{testutils::Address as _, Address, Env};
 
 // ---------------------------------------------------------------------------
@@ -68,6 +68,7 @@ fn test_register_agent() {
     let record = client.get_agent(&agent);
     assert_eq!(record.owner, owner);
     assert_eq!(record.roles.len(), 0);
+    assert_eq!(record.status, AgentStatus::Active);
 
     // Verify owner's agent list
     let agents = client.get_owner_agents(&owner);
@@ -331,6 +332,75 @@ fn test_transfer_ownership_wrong_owner_fails() {
     client.register_agent(&owner, &agent);
     // Attacker cannot transfer someone else's agent
     client.transfer_ownership(&attacker, &agent, &new_owner);
+}
+
+// ===========================================================================
+// Status Management Tests
+// ===========================================================================
+
+#[test]
+fn test_set_agent_status() {
+    let (env, client, _admin) = setup();
+
+    let owner = Address::generate(&env);
+    let agent = Address::generate(&env);
+
+    client.register_agent(&owner, &agent);
+
+    // Status is Active initially
+    let record = client.get_agent(&agent);
+    assert_eq!(record.status, AgentStatus::Active);
+
+    // Set to Suspended
+    client.set_agent_status(&owner, &agent, &AgentStatus::Suspended);
+    let record_suspended = client.get_agent(&agent);
+    assert_eq!(record_suspended.status, AgentStatus::Suspended);
+
+    // Set to Revoked
+    client.set_agent_status(&owner, &agent, &AgentStatus::Revoked);
+    let record_revoked = client.get_agent(&agent);
+    assert_eq!(record_revoked.status, AgentStatus::Revoked);
+}
+
+#[test]
+fn test_verify_agent_respects_status() {
+    let (env, client, _admin) = setup();
+
+    let owner = Address::generate(&env);
+    let agent = Address::generate(&env);
+
+    client.register_agent(&owner, &agent);
+    client.grant_role(&owner, &agent, &Role::Premium);
+
+    // Should return true when Active
+    assert!(client.verify_agent(&agent, &Role::Premium));
+
+    // Suspend agent
+    client.set_agent_status(&owner, &agent, &AgentStatus::Suspended);
+
+    // Should return false because it's suspended
+    assert!(!client.verify_agent(&agent, &Role::Premium));
+
+    // Revoke agent
+    client.set_agent_status(&owner, &agent, &AgentStatus::Revoked);
+
+    // Should return false because it's revoked
+    assert!(!client.verify_agent(&agent, &Role::Premium));
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_set_agent_status_wrong_owner_fails() {
+    let (env, client, _admin) = setup();
+
+    let owner = Address::generate(&env);
+    let attacker = Address::generate(&env);
+    let agent = Address::generate(&env);
+
+    client.register_agent(&owner, &agent);
+
+    // Attacker cannot change status
+    client.set_agent_status(&attacker, &agent, &AgentStatus::Suspended);
 }
 
 // ===========================================================================
