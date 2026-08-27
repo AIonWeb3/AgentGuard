@@ -5,6 +5,7 @@
 /target_ci/
 /target_test/
 /target_final/
+/target_final2/
 
 # Node / SDK
 sdk/node_modules/
