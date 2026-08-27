@@ -1,4 +1,4 @@
-//! # AgentGuard — On-Chain AI Identity & RBAC Registry
+//! # `AgentGuard` — On-Chain AI Identity & RBAC Registry
 //!
 //! A Soroban smart contract that serves as the authentication layer for
 //! autonomous LLM agents on the Stellar network. It enables:
@@ -6,7 +6,7 @@
 //! - **Agent Registration**: Human owners register AI agents under their wallet.
 //! - **Role-Based Access Control**: Owners assign granular roles (Basic, Premium,
 //!   Admin) to their agents.
-//! - **Verification**: Resource providers and the AgentPay settlement contract
+//! - **Verification**: Resource providers and the `AgentPay` settlement contract
 //!   call `verify_agent` to check an agent's identity and permissions before
 //!   granting access or executing financial operations.
 //!

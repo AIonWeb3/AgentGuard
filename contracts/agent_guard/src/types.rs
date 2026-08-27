@@ -1,4 +1,4 @@
-//! # AgentGuard — Data Types & Storage Keys
+//! # `AgentGuard` — Data Types & Storage Keys
 //!
 //! Defines the on-chain data model for the AI agent identity and RBAC registry.
 //!
@@ -61,7 +61,7 @@ pub struct AgentRecord {
 // Storage Keys
 // ---------------------------------------------------------------------------
 
-/// Discriminated storage keys for the AgentGuard contract.
+/// Discriminated storage keys for the `AgentGuard` contract.
 ///
 /// Each variant maps to a specific piece of on-chain state and determines
 /// which storage tier (instance vs. persistent) the data lives in.

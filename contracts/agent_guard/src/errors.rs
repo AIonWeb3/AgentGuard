@@ -1,8 +1,8 @@
-//! # AgentGuard — Error Definitions
+//! # `AgentGuard` — Error Definitions
 //!
-//! All error codes returned by the AgentGuard contract. Using `#[contracterror]`
+//! All error codes returned by the `AgentGuard` contract. Using `#[contracterror]`
 //! ensures these are properly encoded in the Wasm ABI and surfaced to callers
-//! (including cross-contract calls from AgentPay) as structured error values.
+//! (including cross-contract calls from `AgentPay`) as structured error values.
 
 use soroban_sdk::contracterror;
 

@@ -3,7 +3,6 @@
 //! Tests cover every public function including success paths, error cases,
 //! and authorization boundary checks.
 
-#![cfg(test)]
 
 use crate::contract::AgentGuardContractClient;
 use crate::types::Role;
@@ -49,7 +48,7 @@ fn test_initialize_succeeds() {
 fn test_double_initialize_fails() {
     let (env, client, admin) = setup();
     let _ = &env; // suppress unused warning
-    // Second initialization should fail with AlreadyInitialized (error code 1)
+                  // Second initialization should fail with AlreadyInitialized (error code 1)
     client.initialize(&admin);
 }
 
@@ -88,8 +87,8 @@ fn test_register_multiple_agents() {
     client.register_agent(&owner, &agent1);
     client.register_agent(&owner, &agent2);
 
-    let agents = client.get_owner_agents(&owner);
-    assert_eq!(agents.len(), 2);
+    let owner_agents = client.get_owner_agents(&owner);
+    assert_eq!(owner_agents.len(), 2);
 }
 
 #[test]
