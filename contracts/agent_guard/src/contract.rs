@@ -32,7 +32,7 @@
 //! extension window.
 
 use crate::errors::Error;
-use crate::types::{AgentRecord, DataKey, Role};
+use crate::types::{AgentRecord, AgentStatus, DataKey, Role};
 use soroban_sdk::{contract, contractimpl, Address, Env, Vec};
 
 // ---------------------------------------------------------------------------
@@ -118,6 +118,7 @@ impl AgentGuardContract {
         let record = AgentRecord {
             owner: owner.clone(),
             roles: Vec::new(&env),
+            status: AgentStatus::Active,
             registered_at: env.ledger().timestamp(),
         };
 
@@ -271,6 +272,42 @@ impl AgentGuardContract {
     }
 
     // =======================================================================
+    // Status Management
+    // =======================================================================
+
+    /// Update the operational status of a registered agent.
+    ///
+    /// Only the agent's registered owner may call this.
+    ///
+    /// # Errors
+    /// - `Error::AgentNotFound` if no record exists for `agent_id`.
+    /// - `Error::NotAgentOwner` if `owner` doesn't own this agent.
+    pub fn set_agent_status(
+        env: Env,
+        owner: Address,
+        agent_id: Address,
+        status: AgentStatus,
+    ) -> Result<(), Error> {
+        Self::require_initialized(&env)?;
+        owner.require_auth();
+
+        let agent_key = DataKey::Agent(agent_id);
+        let mut record: AgentRecord =
+            env.storage().persistent().get(&agent_key).ok_or(Error::AgentNotFound)?;
+
+        // Ownership check
+        if record.owner != owner {
+            return Err(Error::NotAgentOwner);
+        }
+
+        record.status = status;
+        env.storage().persistent().set(&agent_key, &record);
+        env.storage().persistent().extend_ttl(&agent_key, TTL_THRESHOLD, TTL_EXTEND_TO);
+
+        Ok(())
+    }
+
+    // =======================================================================
     // Verification (Read-Only)
     // =======================================================================
 
@@ -289,6 +326,9 @@ impl AgentGuardContract {
 
         match env.storage().persistent().get::<_, AgentRecord>(&agent_key) {
             Some(record) => {
+                if record.status != AgentStatus::Active {
+                    return false;
+                }
                 for role in record.roles.iter() {
                     if role == required_role {
                         return true;

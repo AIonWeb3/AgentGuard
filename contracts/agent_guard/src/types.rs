@@ -38,6 +38,23 @@ pub enum Role {
 }
 
 // ---------------------------------------------------------------------------
+// Agent Status
+// ---------------------------------------------------------------------------
+
+/// State machine for an agent's operational status.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[repr(u32)]
+pub enum AgentStatus {
+    /// Agent is active and functioning normally.
+    Active = 0,
+    /// Agent is temporarily suspended (e.g., due to suspicious activity).
+    Suspended = 1,
+    /// Agent identity is permanently revoked.
+    Revoked = 2,
+}
+
+// ---------------------------------------------------------------------------
 // Agent Record
 // ---------------------------------------------------------------------------
 
@@ -53,6 +70,8 @@ pub struct AgentRecord {
     pub owner: Address,
     /// Set of roles currently granted to this agent.
     pub roles: Vec<Role>,
+    /// The current operational status of the agent.
+    pub status: AgentStatus,
     /// Ledger timestamp at which the agent was first registered.
     pub registered_at: u64,
 }
