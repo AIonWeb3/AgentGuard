@@ -346,7 +346,7 @@ fn test_set_agent_status() {
     let agent = Address::generate(&env);
 
     client.register_agent(&owner, &agent);
-    
+
     // Status is Active initially
     let record = client.get_agent(&agent);
     assert_eq!(record.status, AgentStatus::Active);
@@ -377,7 +377,7 @@ fn test_verify_agent_respects_status() {
 
     // Suspend agent
     client.set_agent_status(&owner, &agent, &AgentStatus::Suspended);
-    
+
     // Should return false because it's suspended
     assert!(!client.verify_agent(&agent, &Role::Premium));
 
@@ -398,7 +398,7 @@ fn test_set_agent_status_wrong_owner_fails() {
     let agent = Address::generate(&env);
 
     client.register_agent(&owner, &agent);
-    
+
     // Attacker cannot change status
     client.set_agent_status(&attacker, &agent, &AgentStatus::Suspended);
 }
