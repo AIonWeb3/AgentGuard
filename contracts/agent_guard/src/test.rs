@@ -62,7 +62,12 @@ fn test_register_agent() {
     let owner = Address::generate(&env);
     let agent = Address::generate(&env);
 
-    client.register_agent(&owner, &agent);
+    let metadata = crate::types::AgentMetadata {
+        name: soroban_sdk::String::from_str(&env, "TestAgent"),
+        description: soroban_sdk::String::from_str(&env, "Test Agent Description"),
+        version: 1,
+    };
+    client.register_agent(&owner, &agent, &metadata);
 
     // Verify the agent record exists
     let record = client.get_agent(&agent);
@@ -84,8 +89,18 @@ fn test_register_multiple_agents() {
     let agent1 = Address::generate(&env);
     let agent2 = Address::generate(&env);
 
-    client.register_agent(&owner, &agent1);
-    client.register_agent(&owner, &agent2);
+    let metadata = crate::types::AgentMetadata {
+        name: soroban_sdk::String::from_str(&env, "TestAgent1"),
+        description: soroban_sdk::String::from_str(&env, "Test Agent 1"),
+        version: 1,
+    };
+    client.register_agent(&owner, &agent1, &metadata);
+    let metadata = crate::types::AgentMetadata {
+        name: soroban_sdk::String::from_str(&env, "TestAgent2"),
+        description: soroban_sdk::String::from_str(&env, "Test Agent 2"),
+        version: 1,
+    };
+    client.register_agent(&owner, &agent2, &metadata);
 
     let owner_agents = client.get_owner_agents(&owner);
     assert_eq!(owner_agents.len(), 2);
@@ -99,9 +114,19 @@ fn test_register_duplicate_agent_fails() {
     let owner = Address::generate(&env);
     let agent = Address::generate(&env);
 
-    client.register_agent(&owner, &agent);
+    let metadata = crate::types::AgentMetadata {
+        name: soroban_sdk::String::from_str(&env, "TestAgent"),
+        description: soroban_sdk::String::from_str(&env, "Test Agent Description"),
+        version: 1,
+    };
+    client.register_agent(&owner, &agent, &metadata);
     // Registering the same agent again should fail
-    client.register_agent(&owner, &agent);
+    let metadata = crate::types::AgentMetadata {
+        name: soroban_sdk::String::from_str(&env, "TestAgent"),
+        description: soroban_sdk::String::from_str(&env, "Test Agent Description"),
+        version: 1,
+    };
+    client.register_agent(&owner, &agent, &metadata);
 }
 
 // ===========================================================================
@@ -115,7 +140,12 @@ fn test_deregister_agent() {
     let owner = Address::generate(&env);
     let agent = Address::generate(&env);
 
-    client.register_agent(&owner, &agent);
+    let metadata = crate::types::AgentMetadata {
+        name: soroban_sdk::String::from_str(&env, "TestAgent"),
+        description: soroban_sdk::String::from_str(&env, "Test Agent Description"),
+        version: 1,
+    };
+    client.register_agent(&owner, &agent, &metadata);
     client.deregister_agent(&owner, &agent);
 
     // Agent should no longer exist
@@ -143,7 +173,12 @@ fn test_deregister_agent_wrong_owner_fails() {
     let attacker = Address::generate(&env);
     let agent = Address::generate(&env);
 
-    client.register_agent(&owner, &agent);
+    let metadata = crate::types::AgentMetadata {
+        name: soroban_sdk::String::from_str(&env, "TestAgent"),
+        description: soroban_sdk::String::from_str(&env, "Test Agent Description"),
+        version: 1,
+    };
+    client.register_agent(&owner, &agent, &metadata);
     // A different address trying to deregister should fail
     client.deregister_agent(&attacker, &agent);
 }
@@ -159,7 +194,12 @@ fn test_grant_role() {
     let owner = Address::generate(&env);
     let agent = Address::generate(&env);
 
-    client.register_agent(&owner, &agent);
+    let metadata = crate::types::AgentMetadata {
+        name: soroban_sdk::String::from_str(&env, "TestAgent"),
+        description: soroban_sdk::String::from_str(&env, "Test Agent Description"),
+        version: 1,
+    };
+    client.register_agent(&owner, &agent, &metadata);
     client.grant_role(&owner, &agent, &Role::Basic);
 
     let record = client.get_agent(&agent);
@@ -174,7 +214,12 @@ fn test_grant_multiple_roles() {
     let owner = Address::generate(&env);
     let agent = Address::generate(&env);
 
-    client.register_agent(&owner, &agent);
+    let metadata = crate::types::AgentMetadata {
+        name: soroban_sdk::String::from_str(&env, "TestAgent"),
+        description: soroban_sdk::String::from_str(&env, "Test Agent Description"),
+        version: 1,
+    };
+    client.register_agent(&owner, &agent, &metadata);
     client.grant_role(&owner, &agent, &Role::Basic);
     client.grant_role(&owner, &agent, &Role::Premium);
     client.grant_role(&owner, &agent, &Role::Admin);
@@ -191,7 +236,12 @@ fn test_grant_duplicate_role_fails() {
     let owner = Address::generate(&env);
     let agent = Address::generate(&env);
 
-    client.register_agent(&owner, &agent);
+    let metadata = crate::types::AgentMetadata {
+        name: soroban_sdk::String::from_str(&env, "TestAgent"),
+        description: soroban_sdk::String::from_str(&env, "Test Agent Description"),
+        version: 1,
+    };
+    client.register_agent(&owner, &agent, &metadata);
     client.grant_role(&owner, &agent, &Role::Basic);
     // Granting the same role again should fail
     client.grant_role(&owner, &agent, &Role::Basic);
@@ -206,7 +256,12 @@ fn test_grant_role_wrong_owner_fails() {
     let attacker = Address::generate(&env);
     let agent = Address::generate(&env);
 
-    client.register_agent(&owner, &agent);
+    let metadata = crate::types::AgentMetadata {
+        name: soroban_sdk::String::from_str(&env, "TestAgent"),
+        description: soroban_sdk::String::from_str(&env, "Test Agent Description"),
+        version: 1,
+    };
+    client.register_agent(&owner, &agent, &metadata);
     // Attacker cannot grant roles on someone else's agent
     client.grant_role(&attacker, &agent, &Role::Admin);
 }
@@ -218,7 +273,12 @@ fn test_revoke_role() {
     let owner = Address::generate(&env);
     let agent = Address::generate(&env);
 
-    client.register_agent(&owner, &agent);
+    let metadata = crate::types::AgentMetadata {
+        name: soroban_sdk::String::from_str(&env, "TestAgent"),
+        description: soroban_sdk::String::from_str(&env, "Test Agent Description"),
+        version: 1,
+    };
+    client.register_agent(&owner, &agent, &metadata);
     client.grant_role(&owner, &agent, &Role::Basic);
     client.grant_role(&owner, &agent, &Role::Premium);
 
@@ -238,7 +298,12 @@ fn test_revoke_role_not_found_fails() {
     let owner = Address::generate(&env);
     let agent = Address::generate(&env);
 
-    client.register_agent(&owner, &agent);
+    let metadata = crate::types::AgentMetadata {
+        name: soroban_sdk::String::from_str(&env, "TestAgent"),
+        description: soroban_sdk::String::from_str(&env, "Test Agent Description"),
+        version: 1,
+    };
+    client.register_agent(&owner, &agent, &metadata);
     // Agent has no roles — revoke should fail
     client.revoke_role(&owner, &agent, &Role::Admin);
 }
@@ -254,7 +319,12 @@ fn test_verify_agent_with_role() {
     let owner = Address::generate(&env);
     let agent = Address::generate(&env);
 
-    client.register_agent(&owner, &agent);
+    let metadata = crate::types::AgentMetadata {
+        name: soroban_sdk::String::from_str(&env, "TestAgent"),
+        description: soroban_sdk::String::from_str(&env, "Test Agent Description"),
+        version: 1,
+    };
+    client.register_agent(&owner, &agent, &metadata);
     client.grant_role(&owner, &agent, &Role::Premium);
 
     assert!(client.verify_agent(&agent, &Role::Premium));
@@ -267,7 +337,12 @@ fn test_verify_agent_without_role() {
     let owner = Address::generate(&env);
     let agent = Address::generate(&env);
 
-    client.register_agent(&owner, &agent);
+    let metadata = crate::types::AgentMetadata {
+        name: soroban_sdk::String::from_str(&env, "TestAgent"),
+        description: soroban_sdk::String::from_str(&env, "Test Agent Description"),
+        version: 1,
+    };
+    client.register_agent(&owner, &agent, &metadata);
     client.grant_role(&owner, &agent, &Role::Basic);
 
     // Agent has Basic, but we're checking for Admin — should return false
@@ -296,7 +371,12 @@ fn test_transfer_ownership() {
     let owner2 = Address::generate(&env);
     let agent = Address::generate(&env);
 
-    client.register_agent(&owner1, &agent);
+    let metadata = crate::types::AgentMetadata {
+        name: soroban_sdk::String::from_str(&env, "TestAgent"),
+        description: soroban_sdk::String::from_str(&env, "Test Agent Description"),
+        version: 1,
+    };
+    client.register_agent(&owner1, &agent, &metadata);
     client.grant_role(&owner1, &agent, &Role::Basic);
 
     // Transfer from owner1 to owner2
@@ -329,7 +409,12 @@ fn test_transfer_ownership_wrong_owner_fails() {
     let new_owner = Address::generate(&env);
     let agent = Address::generate(&env);
 
-    client.register_agent(&owner, &agent);
+    let metadata = crate::types::AgentMetadata {
+        name: soroban_sdk::String::from_str(&env, "TestAgent"),
+        description: soroban_sdk::String::from_str(&env, "Test Agent Description"),
+        version: 1,
+    };
+    client.register_agent(&owner, &agent, &metadata);
     // Attacker cannot transfer someone else's agent
     client.transfer_ownership(&attacker, &agent, &new_owner);
 }
@@ -345,7 +430,12 @@ fn test_set_agent_status() {
     let owner = Address::generate(&env);
     let agent = Address::generate(&env);
 
-    client.register_agent(&owner, &agent);
+    let metadata = crate::types::AgentMetadata {
+        name: soroban_sdk::String::from_str(&env, "TestAgent"),
+        description: soroban_sdk::String::from_str(&env, "Test Agent Description"),
+        version: 1,
+    };
+    client.register_agent(&owner, &agent, &metadata);
 
     // Status is Active initially
     let record = client.get_agent(&agent);
@@ -369,7 +459,12 @@ fn test_verify_agent_respects_status() {
     let owner = Address::generate(&env);
     let agent = Address::generate(&env);
 
-    client.register_agent(&owner, &agent);
+    let metadata = crate::types::AgentMetadata {
+        name: soroban_sdk::String::from_str(&env, "TestAgent"),
+        description: soroban_sdk::String::from_str(&env, "Test Agent Description"),
+        version: 1,
+    };
+    client.register_agent(&owner, &agent, &metadata);
     client.grant_role(&owner, &agent, &Role::Premium);
 
     // Should return true when Active
@@ -397,7 +492,12 @@ fn test_set_agent_status_wrong_owner_fails() {
     let attacker = Address::generate(&env);
     let agent = Address::generate(&env);
 
-    client.register_agent(&owner, &agent);
+    let metadata = crate::types::AgentMetadata {
+        name: soroban_sdk::String::from_str(&env, "TestAgent"),
+        description: soroban_sdk::String::from_str(&env, "Test Agent Description"),
+        version: 1,
+    };
+    client.register_agent(&owner, &agent, &metadata);
 
     // Attacker cannot change status
     client.set_agent_status(&attacker, &agent, &AgentStatus::Suspended);
@@ -420,5 +520,10 @@ fn test_register_before_init_fails() {
     let agent = Address::generate(&env);
 
     // Contract not initialized — should fail
-    client.register_agent(&owner, &agent);
+    let metadata = crate::types::AgentMetadata {
+        name: soroban_sdk::String::from_str(&env, "TestAgent"),
+        description: soroban_sdk::String::from_str(&env, "Test Agent Description"),
+        version: 1,
+    };
+    client.register_agent(&owner, &agent, &metadata);
 }
