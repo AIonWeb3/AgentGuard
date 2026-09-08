@@ -108,6 +108,7 @@ impl AgentGuardContract {
         metadata: AgentMetadata,
     ) -> Result<(), Error> {
         Self::authorize_owner(&env, &owner)?;
+        metadata.validate()?;
 
         // Guard: prevent duplicate registration
         if storage::has_agent(&env, agent_id.clone()) {
@@ -367,6 +368,7 @@ impl AgentGuardContract {
             return Err(Error::NotAgentOwner);
         }
 
+        metadata.validate()?;
         storage::write_metadata(&env, agent_id.clone(), &metadata);
         MetadataUpdated { agent_id, owner }.publish(&env);
 
