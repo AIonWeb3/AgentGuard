@@ -122,7 +122,7 @@ impl AgentGuardContract {
         // Add agent to owner's agent list
         storage::add_owner_agent(&env, owner.clone(), agent_id.clone());
 
-        AgentRegistered { agent_id, owner }.publish(&env);
+        AgentRegistered { agent_id, owner, name: metadata.name.clone() }.publish(&env);
 
         Ok(())
     }
