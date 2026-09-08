@@ -120,9 +120,7 @@ impl AgentGuardContract {
         storage::write_metadata(&env, agent_id.clone(), &metadata);
 
         // Add agent to owner's agent list
-        let mut agents = storage::read_owner_agents(&env, owner.clone());
-        agents.push_back(agent_id.clone());
-        storage::write_owner_agents(&env, owner.clone(), &agents);
+        storage::add_owner_agent(&env, owner.clone(), agent_id.clone());
 
         AgentRegistered { agent_id, owner }.publish(&env);
 
