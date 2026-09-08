@@ -256,6 +256,7 @@ impl AgentGuardContract {
     pub fn suspend_agent(env: Env, owner: Address, agent_id: Address) -> Result<(), Error> {
         Self::authorize_owner(&env, &owner)?;
         let mut record = Self::load_owned_agent(&env, &owner, agent_id.clone())?;
+        record.status.can_transition_to(AgentStatus::Suspended)?;
         record.status = AgentStatus::Suspended;
         storage::write_agent(&env, agent_id.clone(), &record);
         StatusChanged { agent_id, owner, status: AgentStatus::Suspended }.publish(&env);
