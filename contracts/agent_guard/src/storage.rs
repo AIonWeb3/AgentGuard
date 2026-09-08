@@ -5,7 +5,7 @@
 
 use crate::errors::Error;
 use crate::types::{AgentMetadata, AgentRecord};
-use soroban_sdk::{contracttype, Address, Env};
+use soroban_sdk::{contracttype, Address, Env, Vec};
 
 /// Minimum TTL (in ledgers) before an extension is triggered.
 pub(crate) const TTL_THRESHOLD: u32 = 120_960;
@@ -68,4 +68,19 @@ pub(crate) fn has_agent(env: &Env, agent_id: Address) -> bool {
 pub(crate) fn remove_agent(env: &Env, agent_id: Address) {
     let key = DataKey::Agent(agent_id);
     env.storage().persistent().remove(&key);
+}
+
+pub(crate) fn read_owner_agents(env: &Env, owner: Address) -> Vec<Address> {
+    let key = DataKey::OwnerAgents(owner);
+    env.storage().persistent().get(&key).unwrap_or(Vec::new(env))
+}
+
+pub(crate) fn write_owner_agents(env: &Env, owner: Address, agents: &Vec<Address>) {
+    let key = DataKey::OwnerAgents(owner);
+    if agents.is_empty() {
+        env.storage().persistent().remove(&key);
+    } else {
+        env.storage().persistent().set(&key, agents);
+        env.storage().persistent().extend_ttl(&key, TTL_THRESHOLD, TTL_EXTEND_TO);
+    }
 }
