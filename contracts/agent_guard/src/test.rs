@@ -5,8 +5,16 @@
 
 use crate::contract::AgentGuardContractClient;
 use crate::errors::Error;
-use crate::types::{AgentStatus, Role};
-use soroban_sdk::{testutils::Address as _, Address, Env};
+use crate::types::{AgentMetadata, AgentStatus, Role};
+use soroban_sdk::{testutils::Address as _, Address, Env, String};
+
+fn sample_metadata(env: &Env, name: &str) -> AgentMetadata {
+    AgentMetadata {
+        name: String::from_str(env, name),
+        description: String::from_str(env, "test agent"),
+        version: 1,
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Helper: set up a fresh environment with an initialized contract
@@ -702,4 +710,52 @@ fn test_agent_record_owner_and_defaults() {
     assert_eq!(record.status, AgentStatus::Active);
     assert!(record.require_owner(&owner).is_ok());
     assert_eq!(record.require_owner(&other), Err(Error::NotAgentOwner));
+}
+
+#[test]
+fn test_register_stores_metadata_and_owner_index() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let agent = Address::generate(&env);
+    let metadata = sample_metadata(&env, "InvoiceBot");
+    client.register_agent(&owner, &agent, &metadata);
+
+    let record = client.get_agent(&agent);
+    assert_eq!(record.owner, owner);
+    assert_eq!(record.status, AgentStatus::Active);
+    let stored = client.get_agent_metadata(&agent);
+    assert_eq!(stored.name, metadata.name);
+    assert_eq!(stored.version, 1);
+    let agents = client.get_owner_agents(&owner);
+    assert_eq!(agents.len(), 1);
+    assert_eq!(agents.get(0).unwrap(), agent);
+}
+
+#[test]
+fn test_get_owner_agents_empty_for_unknown_owner() {
+    let (env, client, _admin) = setup();
+    let stranger = Address::generate(&env);
+    assert_eq!(client.get_owner_agents(&stranger).len(), 0);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #4)")]
+fn test_get_agent_missing_fails() {
+    let (env, client, _admin) = setup();
+    let unknown = Address::generate(&env);
+    client.get_agent(&unknown);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #11)")]
+fn test_register_empty_name_fails() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let agent = Address::generate(&env);
+    let metadata = AgentMetadata {
+        name: String::from_str(&env, ""),
+        description: String::from_str(&env, "x"),
+        version: 1,
+    };
+    client.register_agent(&owner, &agent, &metadata);
 }
