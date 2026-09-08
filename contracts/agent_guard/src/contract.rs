@@ -115,18 +115,8 @@ impl AgentGuardContract {
             return Err(Error::AgentAlreadyRegistered);
         }
 
-        // Create the agent record with an empty role set
-        let record = AgentRecord {
-            owner: owner.clone(),
-            roles: Vec::new(&env),
-            status: AgentStatus::Active,
-            registered_at: env.ledger().timestamp(),
-        };
-
-        // Store the agent record
+        let record = AgentRecord::new(&env, owner.clone(), AgentStatus::Active);
         storage::write_agent(&env, agent_id.clone(), &record);
-
-        // Store the metadata
         storage::write_metadata(&env, agent_id.clone(), &metadata);
 
         // Add agent to owner's agent list
