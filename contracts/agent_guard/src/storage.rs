@@ -65,6 +65,13 @@ pub(crate) fn has_agent(env: &Env, agent_id: Address) -> bool {
     env.storage().persistent().has(&key)
 }
 
+pub(crate) fn touch_agent(env: &Env, agent_id: Address) {
+    let key = DataKey::Agent(agent_id);
+    if env.storage().persistent().has(&key) {
+        env.storage().persistent().extend_ttl(&key, TTL_THRESHOLD, TTL_EXTEND_TO);
+    }
+}
+
 pub(crate) fn remove_agent(env: &Env, agent_id: Address) {
     let key = DataKey::Agent(agent_id);
     env.storage().persistent().remove(&key);

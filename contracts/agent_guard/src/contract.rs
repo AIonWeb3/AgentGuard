@@ -368,12 +368,14 @@ impl AgentGuardContract {
     // Query Functions (Read-Only)
     // =======================================================================
 
-    /// Retrieve the full on-chain record for an agent.
+    /// Retrieve the full on-chain record for an agent (owner, roles, status, timestamp).
     ///
     /// # Errors
     /// - `Error::AgentNotFound` if no record exists.
     pub fn get_agent(env: Env, agent_id: Address) -> Result<AgentRecord, Error> {
-        storage::read_agent(&env, agent_id)
+        let record = storage::read_agent(&env, agent_id.clone())?;
+        storage::touch_agent(&env, agent_id);
+        Ok(record)
     }
 
     /// Retrieve the metadata associated with an agent.
