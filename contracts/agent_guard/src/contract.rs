@@ -33,8 +33,8 @@
 
 use crate::errors::Error;
 use crate::events::{
-    AgentDeregistered, AgentReactivated, AgentRegistered, AgentSuspended, MetadataUpdated,
-    OwnershipTransferred, RoleGranted, RoleRevoked, StatusChanged,
+    AgentDeregistered, AgentReactivated, AgentRegistered, AgentRevoked, AgentSuspended,
+    MetadataUpdated, OwnershipTransferred, RoleGranted, RoleRevoked, StatusChanged,
 };
 use crate::storage::{self, DataKey, TTL_EXTEND_TO, TTL_THRESHOLD};
 use crate::types::{AgentMetadata, AgentRecord, AgentStatus, Role};
@@ -292,9 +292,17 @@ impl AgentGuardContract {
     pub fn revoke_agent(env: Env, owner: Address, agent_id: Address) -> Result<(), Error> {
         Self::authorize_owner(&env, &owner)?;
         let mut record = Self::load_owned_agent(&env, &owner, agent_id.clone())?;
+        let previous_status = record.status;
         record.status.can_transition_to(AgentStatus::Revoked)?;
         record.status = AgentStatus::Revoked;
-        storage::write_agent(&env, agent_id, &record);
+        storage::write_agent(&env, agent_id.clone(), &record);
+        AgentRevoked {
+            agent_id,
+            owner,
+            previous_status,
+            new_status: AgentStatus::Revoked,
+        }
+        .publish(&env);
         Ok(())
     }
 
