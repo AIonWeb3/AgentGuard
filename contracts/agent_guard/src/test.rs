@@ -759,3 +759,86 @@ fn test_register_empty_name_fails() {
     };
     client.register_agent(&owner, &agent, &metadata);
 }
+
+#[test]
+fn test_full_agent_lifecycle() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let agent = Address::generate(&env);
+    client.register_agent(&owner, &agent, &sample_metadata(&env, "KillSwitch"));
+    assert_eq!(client.get_agent(&agent).status, AgentStatus::Active);
+
+    client.suspend_agent(&owner, &agent);
+    assert_eq!(client.get_agent(&agent).status, AgentStatus::Suspended);
+
+    client.reactivate_agent(&owner, &agent);
+    assert_eq!(client.get_agent(&agent).status, AgentStatus::Active);
+
+    client.revoke_agent(&owner, &agent);
+    assert_eq!(client.get_agent(&agent).status, AgentStatus::Revoked);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_unauthorized_suspend_fails() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let attacker = Address::generate(&env);
+    let agent = Address::generate(&env);
+    client.register_agent(&owner, &agent, &sample_metadata(&env, "A"));
+    client.suspend_agent(&attacker, &agent);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_unauthorized_reactivate_fails() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let attacker = Address::generate(&env);
+    let agent = Address::generate(&env);
+    client.register_agent(&owner, &agent, &sample_metadata(&env, "A"));
+    client.suspend_agent(&owner, &agent);
+    client.reactivate_agent(&attacker, &agent);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_unauthorized_revoke_fails() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let attacker = Address::generate(&env);
+    let agent = Address::generate(&env);
+    client.register_agent(&owner, &agent, &sample_metadata(&env, "A"));
+    client.revoke_agent(&attacker, &agent);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #10)")]
+fn test_reactivate_revoked_agent_fails() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let agent = Address::generate(&env);
+    client.register_agent(&owner, &agent, &sample_metadata(&env, "A"));
+    client.revoke_agent(&owner, &agent);
+    client.reactivate_agent(&owner, &agent);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #4)")]
+fn test_suspend_nonexistent_agent_fails() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let agent = Address::generate(&env);
+    client.suspend_agent(&owner, &agent);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #9)")]
+fn test_suspend_already_suspended_fails() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let agent = Address::generate(&env);
+    client.register_agent(&owner, &agent, &sample_metadata(&env, "A"));
+    client.suspend_agent(&owner, &agent);
+    client.suspend_agent(&owner, &agent);
+}
