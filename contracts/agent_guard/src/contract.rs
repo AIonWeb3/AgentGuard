@@ -292,6 +292,7 @@ impl AgentGuardContract {
     pub fn revoke_agent(env: Env, owner: Address, agent_id: Address) -> Result<(), Error> {
         Self::authorize_owner(&env, &owner)?;
         let mut record = Self::load_owned_agent(&env, &owner, agent_id.clone())?;
+        record.status.can_transition_to(AgentStatus::Revoked)?;
         record.status = AgentStatus::Revoked;
         storage::write_agent(&env, agent_id, &record);
         Ok(())
@@ -310,16 +311,9 @@ impl AgentGuardContract {
         agent_id: Address,
         status: AgentStatus,
     ) -> Result<(), Error> {
-        Self::require_initialized(&env)?;
-        owner.require_auth();
-
-        let mut record = storage::read_agent(&env, agent_id.clone())?;
-
-        // Ownership check
-        if record.owner != owner {
-            return Err(Error::NotAgentOwner);
-        }
-
+        Self::authorize_owner(&env, &owner)?;
+        let mut record = Self::load_owned_agent(&env, &owner, agent_id.clone())?;
+        record.status.can_transition_to(status)?;
         record.status = status;
         storage::write_agent(&env, agent_id.clone(), &record);
 
