@@ -58,13 +58,13 @@ pub enum AgentStatus {
 impl AgentStatus {
     /// Whether this status is operational (`Active` only).
     #[must_use]
-    pub fn is_active(self) -> bool {
+    pub const fn is_active(self) -> bool {
         matches!(self, Self::Active)
     }
 
     /// Whether this identity is permanently disabled.
     #[must_use]
-    pub fn is_revoked(self) -> bool {
+    pub const fn is_revoked(self) -> bool {
         matches!(self, Self::Revoked)
     }
 
@@ -73,7 +73,11 @@ impl AgentStatus {
     /// Allowed: `Active → Suspended`, `Suspended → Active`,
     /// `Active → Revoked`, `Suspended → Revoked`.
     /// `Revoked` is terminal.
-    pub fn can_transition_to(self, next: AgentStatus) -> Result<(), Error> {
+    ///
+    /// # Errors
+    /// - `Error::AgentRevoked` if the current status is already `Revoked`.
+    /// - `Error::InvalidStateTransition` if the move is not allowed.
+    pub fn can_transition_to(self, next: Self) -> Result<(), Error> {
         if self == Self::Revoked {
             return Err(Error::AgentRevoked);
         }
@@ -81,10 +85,8 @@ impl AgentStatus {
             return Err(Error::InvalidStateTransition);
         }
         match (self, next) {
-            (Self::Active, Self::Suspended)
-            | (Self::Active, Self::Revoked)
-            | (Self::Suspended, Self::Active)
-            | (Self::Suspended, Self::Revoked) => Ok(()),
+            (Self::Active, Self::Suspended | Self::Revoked)
+            | (Self::Suspended, Self::Active | Self::Revoked) => Ok(()),
             _ => Err(Error::InvalidStateTransition),
         }
     }
@@ -114,11 +116,15 @@ pub struct AgentRecord {
 
 impl AgentRecord {
     /// Create a new persistent record with no roles and the given status.
+    #[must_use]
     pub fn new(env: &Env, owner: Address, status: AgentStatus) -> Self {
         Self { owner, roles: Vec::new(env), status, registered_at: env.ledger().timestamp() }
     }
 
     /// Fail unless `owner` matches the stored controller.
+    ///
+    /// # Errors
+    /// - `Error::NotAgentOwner` if `owner` does not match the stored controller.
     pub fn require_owner(&self, owner: &Address) -> Result<(), Error> {
         if self.owner != *owner {
             return Err(Error::NotAgentOwner);
@@ -145,6 +151,9 @@ pub struct AgentMetadata {
 
 impl AgentMetadata {
     /// Reject empty names. Description may be empty; version is unconstrained.
+    ///
+    /// # Errors
+    /// - `Error::InvalidMetadata` if `name` is empty.
     pub fn validate(&self) -> Result<(), Error> {
         if self.name.is_empty() {
             return Err(Error::InvalidMetadata);

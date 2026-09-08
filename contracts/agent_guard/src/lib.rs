@@ -39,5 +39,5 @@ mod test;
 pub use contract::*;
 pub use errors::*;
 pub use events::*;
-pub use storage::*;
+pub use storage::DataKey;
 pub use types::*;
