@@ -88,11 +88,12 @@ stellar contract build
 | Function | Auth | Description |
 |---|---|---|
 | `initialize(admin)` | admin | One-time setup |
-| `register_agent(owner, agent_id, metadata)` | owner | Register an agent with name / purpose / version |
+| `register_agent(owner, agent_id, metadata)` | owner | Register an agent with name / purpose / version (`Active`) |
 | `update_agent_metadata(...)` | owner | Update name, purpose, version |
 | `deregister_agent(owner, agent_id)` | owner | Remove the agent |
 | `grant_role` / `revoke_role` | owner | `Basic`, `Premium`, `Admin` |
-| `set_agent_status` | owner | `Active`, `Suspended`, `Revoked` |
+| `suspend_agent` / `reactivate_agent` / `revoke_agent` | owner | Kill switch (`Active` ⇄ `Suspended` → `Revoked`) |
+| `set_agent_status` | owner | Same state machine as the dedicated kill switches |
 | `verify_agent(agent_id, required_role) → bool` | none | Active + role ≥ required |
 | `get_agent` / `get_agent_metadata` / `get_owner_agents` / `get_admin` | none | Reads |
 | `transfer_ownership` | current owner | Move the agent to another wallet |
@@ -103,14 +104,16 @@ Indexed events fire on register, deregister, grant, revoke, status, metadata, an
 
 ### Deploy (testnet)
 
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Use a named CLI identity, never a committed secret:
+
 ```bash
-stellar contract deploy \
-  --wasm target/wasm32v1-none/release/agent_guard.wasm \
-  --network testnet \
-  --source <YOUR_SECRET_KEY>
+./scripts/build-wasm.sh
+./scripts/deploy-testnet.sh
 ```
 
-Then `initialize` once with the admin address.
+Then `initialize` once with the admin address. `./scripts/invoke-demo.sh` walks register → query → suspend → reactivate → revoke.
+
+A Testnet **contract ID is not recorded here** until a deploy with real credentials succeeds.
 
 ---
 

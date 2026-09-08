@@ -287,6 +287,35 @@ export class AgentGuardClient {
     );
   }
 
+  async suspendAgent(
+    owner: string,
+    agentId: string,
+    signer: TransactionSigner
+  ): Promise<SubmittedTransaction> {
+    return this.submit(owner, "suspend_agent", [addressToScVal(owner), addressToScVal(agentId)], signer);
+  }
+
+  async reactivateAgent(
+    owner: string,
+    agentId: string,
+    signer: TransactionSigner
+  ): Promise<SubmittedTransaction> {
+    return this.submit(
+      owner,
+      "reactivate_agent",
+      [addressToScVal(owner), addressToScVal(agentId)],
+      signer
+    );
+  }
+
+  async revokeAgent(
+    owner: string,
+    agentId: string,
+    signer: TransactionSigner
+  ): Promise<SubmittedTransaction> {
+    return this.submit(owner, "revoke_agent", [addressToScVal(owner), addressToScVal(agentId)], signer);
+  }
+
   async updateAgentMetadata(
     owner: string,
     agentId: string,
