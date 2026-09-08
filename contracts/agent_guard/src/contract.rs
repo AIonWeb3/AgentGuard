@@ -36,7 +36,7 @@ use crate::events::{
     AgentDeregistered, AgentRegistered, MetadataUpdated, OwnershipTransferred, RoleGranted,
     RoleRevoked, StatusChanged,
 };
-use crate::storage::DataKey;
+use crate::storage::{self, DataKey, TTL_EXTEND_TO, TTL_THRESHOLD};
 use crate::types::{AgentMetadata, AgentRecord, AgentStatus, Role};
 use soroban_sdk::{contract, contractimpl, Address, Env, Vec};
 
@@ -44,13 +44,7 @@ use soroban_sdk::{contract, contractimpl, Address, Env, Vec};
 // TTL Constants
 // ---------------------------------------------------------------------------
 
-/// Minimum TTL (in ledgers) before an extension is triggered.
-/// ~7 days at ~5 seconds/ledger = 120,960 ledgers.
-const TTL_THRESHOLD: u32 = 120_960;
-
-/// TTL to extend to (in ledgers) when threshold is reached.
-/// ~30 days at ~5 seconds/ledger = 518,400 ledgers.
-const TTL_EXTEND_TO: u32 = 518_400;
+// TTL constants live in `storage` and are used for instance + persistent rent.
 
 // ---------------------------------------------------------------------------
 // Contract Definition
@@ -119,7 +113,7 @@ impl AgentGuardContract {
         owner.require_auth();
 
         // Guard: prevent duplicate registration
-        if Self::has_agent(&env, agent_id.clone()) {
+        if storage::has_agent(&env, agent_id.clone()) {
             return Err(Error::AgentAlreadyRegistered);
         }
 
@@ -132,10 +126,10 @@ impl AgentGuardContract {
         };
 
         // Store the agent record
-        Self::write_agent(&env, agent_id.clone(), &record);
+        storage::write_agent(&env, agent_id.clone(), &record);
 
         // Store the metadata
-        Self::write_metadata(&env, agent_id.clone(), &metadata);
+        storage::write_metadata(&env, agent_id.clone(), &metadata);
 
         // Add agent to owner's agent list
         let mut agents = Self::read_owner_agents(&env, owner.clone());
@@ -157,7 +151,7 @@ impl AgentGuardContract {
         Self::require_initialized(&env)?;
         owner.require_auth();
 
-        let record = Self::read_agent(&env, agent_id.clone())?;
+        let record = storage::read_agent(&env, agent_id.clone())?;
 
         // Only the registered owner can deregister
         if record.owner != owner {
@@ -165,10 +159,10 @@ impl AgentGuardContract {
         }
 
         // Remove the agent record
-        Self::remove_agent(&env, agent_id.clone());
+        storage::remove_agent(&env, agent_id.clone());
 
         // Remove the metadata
-        Self::remove_metadata(&env, agent_id.clone());
+        storage::remove_metadata(&env, agent_id.clone());
 
         // Remove from owner's agent list
         let agents = Self::read_owner_agents(&env, owner.clone());
@@ -207,7 +201,7 @@ impl AgentGuardContract {
         Self::require_initialized(&env)?;
         owner.require_auth();
 
-        let mut record = Self::read_agent(&env, agent_id.clone())?;
+        let mut record = storage::read_agent(&env, agent_id.clone())?;
 
         // Ownership check
         if record.owner != owner {
@@ -223,7 +217,7 @@ impl AgentGuardContract {
 
         // Add the role and persist
         record.roles.push_back(role);
-        Self::write_agent(&env, agent_id.clone(), &record);
+        storage::write_agent(&env, agent_id.clone(), &record);
 
         RoleGranted { agent_id, owner, role }.publish(&env);
 
@@ -245,7 +239,7 @@ impl AgentGuardContract {
         Self::require_initialized(&env)?;
         owner.require_auth();
 
-        let mut record = Self::read_agent(&env, agent_id.clone())?;
+        let mut record = storage::read_agent(&env, agent_id.clone())?;
 
         // Ownership check
         if record.owner != owner {
@@ -268,7 +262,7 @@ impl AgentGuardContract {
         }
 
         record.roles = new_roles;
-        Self::write_agent(&env, agent_id.clone(), &record);
+        storage::write_agent(&env, agent_id.clone(), &record);
 
         RoleRevoked { agent_id, owner, role }.publish(&env);
 
@@ -295,7 +289,7 @@ impl AgentGuardContract {
         Self::require_initialized(&env)?;
         owner.require_auth();
 
-        let mut record = Self::read_agent(&env, agent_id.clone())?;
+        let mut record = storage::read_agent(&env, agent_id.clone())?;
 
         // Ownership check
         if record.owner != owner {
@@ -303,7 +297,7 @@ impl AgentGuardContract {
         }
 
         record.status = status;
-        Self::write_agent(&env, agent_id.clone(), &record);
+        storage::write_agent(&env, agent_id.clone(), &record);
 
         StatusChanged { agent_id, owner, status }.publish(&env);
 
@@ -328,7 +322,7 @@ impl AgentGuardContract {
     /// (never panics).
     #[must_use]
     pub fn verify_agent(env: Env, agent_id: Address, required_role: Role) -> bool {
-        match Self::read_agent(&env, agent_id) {
+        match storage::read_agent(&env, agent_id) {
             Ok(record) => {
                 if record.status != AgentStatus::Active {
                     return false;
@@ -353,7 +347,7 @@ impl AgentGuardContract {
     /// # Errors
     /// - `Error::AgentNotFound` if no record exists.
     pub fn get_agent(env: Env, agent_id: Address) -> Result<AgentRecord, Error> {
-        Self::read_agent(&env, agent_id)
+        storage::read_agent(&env, agent_id)
     }
 
     /// Retrieve the metadata associated with an agent.
@@ -361,7 +355,7 @@ impl AgentGuardContract {
     /// # Errors
     /// - `Error::AgentNotFound` if no metadata exists.
     pub fn get_agent_metadata(env: Env, agent_id: Address) -> Result<AgentMetadata, Error> {
-        Self::read_metadata(&env, agent_id)
+        storage::read_metadata(&env, agent_id)
     }
 
     /// Replace the metadata for a registered agent.
@@ -378,12 +372,12 @@ impl AgentGuardContract {
         Self::require_initialized(&env)?;
         owner.require_auth();
 
-        let record = Self::read_agent(&env, agent_id.clone())?;
+        let record = storage::read_agent(&env, agent_id.clone())?;
         if record.owner != owner {
             return Err(Error::NotAgentOwner);
         }
 
-        Self::write_metadata(&env, agent_id.clone(), &metadata);
+        storage::write_metadata(&env, agent_id.clone(), &metadata);
         MetadataUpdated { agent_id, owner }.publish(&env);
 
         Ok(())
@@ -426,7 +420,7 @@ impl AgentGuardContract {
         Self::require_initialized(&env)?;
         current_owner.require_auth();
 
-        let mut record = Self::read_agent(&env, agent_id.clone())?;
+        let mut record = storage::read_agent(&env, agent_id.clone())?;
 
         if record.owner != current_owner {
             return Err(Error::NotAgentOwner);
@@ -434,7 +428,7 @@ impl AgentGuardContract {
 
         // Update the record's owner
         record.owner = new_owner.clone();
-        Self::write_agent(&env, agent_id.clone(), &record);
+        storage::write_agent(&env, agent_id.clone(), &record);
 
         // Remove agent from current owner's list
         let agents = Self::read_owner_agents(&env, current_owner.clone());
@@ -463,43 +457,6 @@ impl AgentGuardContract {
     // =======================================================================
     // Internal Storage Helpers
     // =======================================================================
-
-    fn write_metadata(env: &Env, agent_id: Address, metadata: &AgentMetadata) {
-        let key = DataKey::AgentMetadata(agent_id);
-        env.storage().persistent().set(&key, metadata);
-        env.storage().persistent().extend_ttl(&key, TTL_THRESHOLD, TTL_EXTEND_TO);
-    }
-
-    fn read_metadata(env: &Env, agent_id: Address) -> Result<AgentMetadata, Error> {
-        let key = DataKey::AgentMetadata(agent_id);
-        env.storage().persistent().get(&key).ok_or(Error::AgentNotFound)
-    }
-
-    fn remove_metadata(env: &Env, agent_id: Address) {
-        let key = DataKey::AgentMetadata(agent_id);
-        env.storage().persistent().remove(&key);
-    }
-
-    fn read_agent(env: &Env, agent_id: Address) -> Result<AgentRecord, Error> {
-        let key = DataKey::Agent(agent_id);
-        env.storage().persistent().get(&key).ok_or(Error::AgentNotFound)
-    }
-
-    fn write_agent(env: &Env, agent_id: Address, record: &AgentRecord) {
-        let key = DataKey::Agent(agent_id);
-        env.storage().persistent().set(&key, record);
-        env.storage().persistent().extend_ttl(&key, TTL_THRESHOLD, TTL_EXTEND_TO);
-    }
-
-    fn has_agent(env: &Env, agent_id: Address) -> bool {
-        let key = DataKey::Agent(agent_id);
-        env.storage().persistent().has(&key)
-    }
-
-    fn remove_agent(env: &Env, agent_id: Address) {
-        let key = DataKey::Agent(agent_id);
-        env.storage().persistent().remove(&key);
-    }
 
     fn read_owner_agents(env: &Env, owner: Address) -> Vec<Address> {
         let key = DataKey::OwnerAgents(owner);
