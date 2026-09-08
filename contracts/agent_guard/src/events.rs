@@ -1,14 +1,16 @@
 //! On-chain events emitted by AgentGuard for indexers and audit trails.
 
 use crate::types::{AgentStatus, Role};
-use soroban_sdk::{contractevent, Address};
+use soroban_sdk::{contractevent, Address, String};
 
 #[contractevent]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AgentRegistered {
     #[topic]
     pub agent_id: Address,
+    #[topic]
     pub owner: Address,
+    pub name: String,
 }
 
 #[contractevent]
