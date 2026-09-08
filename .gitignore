@@ -7,9 +7,12 @@
 /target_final/
 /target_final2/
 
-# Node / SDK
+# Node
 sdk/node_modules/
 sdk/dist/
+dashboard/node_modules/
+dashboard/dist/
+examples/**/node_modules/
 
 # IDE
 .vscode/

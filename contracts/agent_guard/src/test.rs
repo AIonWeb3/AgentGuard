@@ -527,3 +527,124 @@ fn test_register_before_init_fails() {
     };
     client.register_agent(&owner, &agent, &metadata);
 }
+
+// ===========================================================================
+// Metadata, Admin, and Role Hierarchy Tests
+// ===========================================================================
+
+#[test]
+fn test_get_agent_metadata() {
+    let (env, client, _admin) = setup();
+
+    let owner = Address::generate(&env);
+    let agent = Address::generate(&env);
+
+    let metadata = crate::types::AgentMetadata {
+        name: soroban_sdk::String::from_str(&env, "InvoiceBot"),
+        description: soroban_sdk::String::from_str(&env, "Pays vendor invoices"),
+        version: 3,
+    };
+    client.register_agent(&owner, &agent, &metadata);
+
+    let stored = client.get_agent_metadata(&agent);
+    assert_eq!(stored.name, metadata.name);
+    assert_eq!(stored.description, metadata.description);
+    assert_eq!(stored.version, 3);
+}
+
+#[test]
+fn test_update_agent_metadata() {
+    let (env, client, _admin) = setup();
+
+    let owner = Address::generate(&env);
+    let agent = Address::generate(&env);
+
+    let metadata = crate::types::AgentMetadata {
+        name: soroban_sdk::String::from_str(&env, "InvoiceBot"),
+        description: soroban_sdk::String::from_str(&env, "v1"),
+        version: 1,
+    };
+    client.register_agent(&owner, &agent, &metadata);
+
+    let updated = crate::types::AgentMetadata {
+        name: soroban_sdk::String::from_str(&env, "InvoiceBot"),
+        description: soroban_sdk::String::from_str(&env, "v2 treasury"),
+        version: 2,
+    };
+    client.update_agent_metadata(&owner, &agent, &updated);
+
+    let stored = client.get_agent_metadata(&agent);
+    assert_eq!(stored.version, 2);
+    assert_eq!(stored.description, updated.description);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_update_agent_metadata_wrong_owner_fails() {
+    let (env, client, _admin) = setup();
+
+    let owner = Address::generate(&env);
+    let attacker = Address::generate(&env);
+    let agent = Address::generate(&env);
+
+    let metadata = crate::types::AgentMetadata {
+        name: soroban_sdk::String::from_str(&env, "InvoiceBot"),
+        description: soroban_sdk::String::from_str(&env, "v1"),
+        version: 1,
+    };
+    client.register_agent(&owner, &agent, &metadata);
+
+    let updated = crate::types::AgentMetadata {
+        name: soroban_sdk::String::from_str(&env, "Hijacked"),
+        description: soroban_sdk::String::from_str(&env, "nope"),
+        version: 9,
+    };
+    client.update_agent_metadata(&attacker, &agent, &updated);
+}
+
+#[test]
+fn test_get_admin() {
+    let (_env, client, admin) = setup();
+    assert_eq!(client.get_admin(), admin);
+}
+
+#[test]
+fn test_verify_agent_role_hierarchy() {
+    let (env, client, _admin) = setup();
+
+    let owner = Address::generate(&env);
+    let agent = Address::generate(&env);
+
+    let metadata = crate::types::AgentMetadata {
+        name: soroban_sdk::String::from_str(&env, "AdminAgent"),
+        description: soroban_sdk::String::from_str(&env, "Has Admin only"),
+        version: 1,
+    };
+    client.register_agent(&owner, &agent, &metadata);
+    client.grant_role(&owner, &agent, &Role::Admin);
+
+    // Admin satisfies every lower tier
+    assert!(client.verify_agent(&agent, &Role::Admin));
+    assert!(client.verify_agent(&agent, &Role::Premium));
+    assert!(client.verify_agent(&agent, &Role::Basic));
+}
+
+#[test]
+fn test_verify_premium_does_not_satisfy_admin() {
+    let (env, client, _admin) = setup();
+
+    let owner = Address::generate(&env);
+    let agent = Address::generate(&env);
+
+    let metadata = crate::types::AgentMetadata {
+        name: soroban_sdk::String::from_str(&env, "PremiumAgent"),
+        description: soroban_sdk::String::from_str(&env, "Has Premium only"),
+        version: 1,
+    };
+    client.register_agent(&owner, &agent, &metadata);
+    client.grant_role(&owner, &agent, &Role::Premium);
+
+    assert!(client.verify_agent(&agent, &Role::Premium));
+    assert!(client.verify_agent(&agent, &Role::Basic));
+    assert!(!client.verify_agent(&agent, &Role::Admin));
+}

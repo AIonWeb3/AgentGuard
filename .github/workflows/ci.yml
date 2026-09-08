@@ -8,29 +8,61 @@ on:
 
 jobs:
   test:
-    name: Build and Test
+    name: Contract
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
           targets: wasm32v1-none
           components: clippy, rustfmt
-      
+
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
-        
+
       - name: Format
         run: cargo fmt --all -- --check
-        
+
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
-        
+
       - name: Build
         run: cargo build --target wasm32v1-none --release
-        
+
       - name: Run tests
         run: cargo test
+
+  sdk:
+    name: SDK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sdk
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: sdk/package-lock.json
+      - run: npm ci
+      - run: npm run build
+
+  dashboard:
+    name: Dashboard
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dashboard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - run: npm ci
+      - run: npm run build
