@@ -33,4 +33,13 @@ pub enum Error {
 
     /// General authorization failure.
     Unauthorized = 8,
+
+    /// Requested lifecycle transition is not allowed from the current status.
+    InvalidStateTransition = 9,
+
+    /// The agent is permanently revoked and cannot be reactivated or reused.
+    AgentRevoked = 10,
+
+    /// Agent metadata failed validation (for example an empty name).
+    InvalidMetadata = 11,
 }
