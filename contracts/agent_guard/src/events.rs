@@ -34,6 +34,17 @@ pub struct AgentSuspended {
 
 #[contractevent]
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AgentReactivated {
+    #[topic]
+    pub agent_id: Address,
+    #[topic]
+    pub owner: Address,
+    pub previous_status: AgentStatus,
+    pub new_status: AgentStatus,
+}
+
+#[contractevent]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RoleGranted {
     #[topic]
     pub agent_id: Address,
