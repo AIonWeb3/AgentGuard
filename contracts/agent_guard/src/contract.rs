@@ -132,9 +132,9 @@ impl AgentGuardContract {
         storage::write_metadata(&env, agent_id.clone(), &metadata);
 
         // Add agent to owner's agent list
-        let mut agents = Self::read_owner_agents(&env, owner.clone());
+        let mut agents = storage::read_owner_agents(&env, owner.clone());
         agents.push_back(agent_id.clone());
-        Self::write_owner_agents(&env, owner.clone(), &agents);
+        storage::write_owner_agents(&env, owner.clone(), &agents);
 
         AgentRegistered { agent_id, owner }.publish(&env);
 
@@ -165,14 +165,14 @@ impl AgentGuardContract {
         storage::remove_metadata(&env, agent_id.clone());
 
         // Remove from owner's agent list
-        let agents = Self::read_owner_agents(&env, owner.clone());
+        let agents = storage::read_owner_agents(&env, owner.clone());
         let mut new_agents = Vec::new(&env);
         for a in agents.iter() {
             if a != agent_id {
                 new_agents.push_back(a);
             }
         }
-        Self::write_owner_agents(&env, owner.clone(), &new_agents);
+        storage::write_owner_agents(&env, owner.clone(), &new_agents);
 
         AgentDeregistered { agent_id, owner }.publish(&env);
 
@@ -396,7 +396,7 @@ impl AgentGuardContract {
     /// Returns an empty vector if the owner has no agents.
     #[must_use]
     pub fn get_owner_agents(env: Env, owner: Address) -> Vec<Address> {
-        Self::read_owner_agents(&env, owner)
+        storage::read_owner_agents(&env, owner)
     }
 
     // =======================================================================
@@ -431,19 +431,19 @@ impl AgentGuardContract {
         storage::write_agent(&env, agent_id.clone(), &record);
 
         // Remove agent from current owner's list
-        let agents = Self::read_owner_agents(&env, current_owner.clone());
+        let agents = storage::read_owner_agents(&env, current_owner.clone());
         let mut new_list = Vec::new(&env);
         for a in agents.iter() {
             if a != agent_id {
                 new_list.push_back(a);
             }
         }
-        Self::write_owner_agents(&env, current_owner.clone(), &new_list);
+        storage::write_owner_agents(&env, current_owner.clone(), &new_list);
 
         // Add agent to new owner's list
-        let mut new_agents = Self::read_owner_agents(&env, new_owner.clone());
+        let mut new_agents = storage::read_owner_agents(&env, new_owner.clone());
         new_agents.push_back(agent_id.clone());
-        Self::write_owner_agents(&env, new_owner.clone(), &new_agents);
+        storage::write_owner_agents(&env, new_owner.clone(), &new_agents);
 
         OwnershipTransferred { agent_id, from: current_owner, to: new_owner }.publish(&env);
 
@@ -457,21 +457,6 @@ impl AgentGuardContract {
     // =======================================================================
     // Internal Storage Helpers
     // =======================================================================
-
-    fn read_owner_agents(env: &Env, owner: Address) -> Vec<Address> {
-        let key = DataKey::OwnerAgents(owner);
-        env.storage().persistent().get(&key).unwrap_or(Vec::new(env))
-    }
-
-    fn write_owner_agents(env: &Env, owner: Address, agents: &Vec<Address>) {
-        let key = DataKey::OwnerAgents(owner);
-        if agents.is_empty() {
-            env.storage().persistent().remove(&key);
-        } else {
-            env.storage().persistent().set(&key, agents);
-            env.storage().persistent().extend_ttl(&key, TTL_THRESHOLD, TTL_EXTEND_TO);
-        }
-    }
 
     /// Asserts the contract has been initialized.
     fn require_initialized(env: &Env) -> Result<(), Error> {
