@@ -4,6 +4,7 @@
 //! and authorization boundary checks.
 
 use crate::contract::AgentGuardContractClient;
+use crate::errors::Error;
 use crate::types::{AgentStatus, Role};
 use soroban_sdk::{testutils::Address as _, Address, Env};
 
@@ -647,4 +648,27 @@ fn test_verify_premium_does_not_satisfy_admin() {
     assert!(client.verify_agent(&agent, &Role::Premium));
     assert!(client.verify_agent(&agent, &Role::Basic));
     assert!(!client.verify_agent(&agent, &Role::Admin));
+}
+
+#[test]
+fn test_agent_status_transition_rules() {
+    assert!(AgentStatus::Active.can_transition_to(AgentStatus::Suspended).is_ok());
+    assert!(AgentStatus::Suspended.can_transition_to(AgentStatus::Active).is_ok());
+    assert!(AgentStatus::Active.can_transition_to(AgentStatus::Revoked).is_ok());
+    assert!(AgentStatus::Suspended.can_transition_to(AgentStatus::Revoked).is_ok());
+
+    assert_eq!(
+        AgentStatus::Active.can_transition_to(AgentStatus::Active),
+        Err(Error::InvalidStateTransition)
+    );
+    assert_eq!(
+        AgentStatus::Revoked.can_transition_to(AgentStatus::Active),
+        Err(Error::AgentRevoked)
+    );
+    assert_eq!(
+        AgentStatus::Revoked.can_transition_to(AgentStatus::Suspended),
+        Err(Error::AgentRevoked)
+    );
+    assert!(AgentStatus::Active.is_active());
+    assert!(AgentStatus::Revoked.is_revoked());
 }
