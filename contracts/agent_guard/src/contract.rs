@@ -270,6 +270,15 @@ impl AgentGuardContract {
         Ok(())
     }
 
+    /// Restore a suspended agent (`Suspended → Active`). Owner must authenticate.
+    pub fn reactivate_agent(env: Env, owner: Address, agent_id: Address) -> Result<(), Error> {
+        Self::authorize_owner(&env, &owner)?;
+        let mut record = Self::load_owned_agent(&env, &owner, agent_id.clone())?;
+        record.status = AgentStatus::Active;
+        storage::write_agent(&env, agent_id, &record);
+        Ok(())
+    }
+
     /// Update the operational status of a registered agent.
     ///
     /// Only the agent's registered owner may call this.
