@@ -152,35 +152,3 @@ impl AgentMetadata {
         Ok(())
     }
 }
-
-// ---------------------------------------------------------------------------
-// Storage Keys
-// ---------------------------------------------------------------------------
-
-/// Discriminated storage keys for the `AgentGuard` contract.
-///
-/// Each variant maps to a specific piece of on-chain state and determines
-/// which storage tier (instance vs. persistent) the data lives in.
-#[contracttype]
-#[derive(Clone)]
-pub enum DataKey {
-    /// Contract-level administrator address.
-    /// **Storage: Instance** — loaded on every invocation, negligible size.
-    Admin,
-
-    /// Initialization guard — prevents double-initialization.
-    /// **Storage: Instance.**
-    Initialized,
-
-    /// Maps an agent's `Address` → `AgentRecord`.
-    /// **Storage: Persistent** — long-lived identity data.
-    Agent(Address),
-
-    /// Maps an agent's `Address` → `AgentMetadata`.
-    /// **Storage: Persistent** — descriptive information about the agent.
-    AgentMetadata(Address),
-
-    /// Maps an owner's `Address` → `Vec<Address>` of their registered agents.
-    /// **Storage: Persistent** — enables enumeration of all agents per owner.
-    OwnerAgents(Address),
-}
