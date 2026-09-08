@@ -254,7 +254,12 @@ impl AgentGuardContract {
 
     /// Temporarily disable an agent (`Active → Suspended`).
     pub fn suspend_agent(env: Env, owner: Address, agent_id: Address) -> Result<(), Error> {
-        Self::set_agent_status(env, owner, agent_id, AgentStatus::Suspended)
+        Self::authorize_owner(&env, &owner)?;
+        let mut record = Self::load_owned_agent(&env, &owner, agent_id.clone())?;
+        record.status = AgentStatus::Suspended;
+        storage::write_agent(&env, agent_id.clone(), &record);
+        StatusChanged { agent_id, owner, status: AgentStatus::Suspended }.publish(&env);
+        Ok(())
     }
 
     /// Update the operational status of a registered agent.
@@ -437,6 +442,16 @@ impl AgentGuardContract {
         Self::require_initialized(env)?;
         owner.require_auth();
         Ok(())
+    }
+
+    fn load_owned_agent(
+        env: &Env,
+        owner: &Address,
+        agent_id: Address,
+    ) -> Result<AgentRecord, Error> {
+        let record = storage::read_agent(env, agent_id)?;
+        record.require_owner(owner)?;
+        Ok(record)
     }
 
     /// Asserts the contract has been initialized.
