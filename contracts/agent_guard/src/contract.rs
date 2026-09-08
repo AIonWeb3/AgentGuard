@@ -36,7 +36,8 @@ use crate::events::{
     AgentDeregistered, AgentRegistered, MetadataUpdated, OwnershipTransferred, RoleGranted,
     RoleRevoked, StatusChanged,
 };
-use crate::types::{AgentMetadata, AgentRecord, AgentStatus, DataKey, Role};
+use crate::storage::DataKey;
+use crate::types::{AgentMetadata, AgentRecord, AgentStatus, Role};
 use soroban_sdk::{contract, contractimpl, Address, Env, Vec};
 
 // ---------------------------------------------------------------------------

@@ -30,6 +30,7 @@
 mod contract;
 mod errors;
 mod events;
+mod storage;
 mod types;
 
 #[cfg(test)]
@@ -38,4 +39,5 @@ mod test;
 pub use contract::*;
 pub use errors::*;
 pub use events::*;
+pub use storage::*;
 pub use types::*;
