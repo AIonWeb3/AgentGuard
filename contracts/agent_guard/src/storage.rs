@@ -84,3 +84,27 @@ pub(crate) fn write_owner_agents(env: &Env, owner: Address, agents: &Vec<Address
         env.storage().persistent().extend_ttl(&key, TTL_THRESHOLD, TTL_EXTEND_TO);
     }
 }
+
+/// Append `agent_id` if it is not already present. Preserves insertion order.
+pub(crate) fn add_owner_agent(env: &Env, owner: Address, agent_id: Address) {
+    let mut agents = read_owner_agents(env, owner.clone());
+    for existing in agents.iter() {
+        if existing == agent_id {
+            return;
+        }
+    }
+    agents.push_back(agent_id);
+    write_owner_agents(env, owner, &agents);
+}
+
+/// Remove `agent_id` from the owner's index if present.
+pub(crate) fn remove_owner_agent(env: &Env, owner: Address, agent_id: Address) {
+    let agents = read_owner_agents(env, owner.clone());
+    let mut next = Vec::new(env);
+    for existing in agents.iter() {
+        if existing != agent_id {
+            next.push_back(existing);
+        }
+    }
+    write_owner_agents(env, owner, &next);
+}

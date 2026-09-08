@@ -165,14 +165,7 @@ impl AgentGuardContract {
         storage::remove_metadata(&env, agent_id.clone());
 
         // Remove from owner's agent list
-        let agents = storage::read_owner_agents(&env, owner.clone());
-        let mut new_agents = Vec::new(&env);
-        for a in agents.iter() {
-            if a != agent_id {
-                new_agents.push_back(a);
-            }
-        }
-        storage::write_owner_agents(&env, owner.clone(), &new_agents);
+        storage::remove_owner_agent(&env, owner.clone(), agent_id.clone());
 
         AgentDeregistered { agent_id, owner }.publish(&env);
 
@@ -431,19 +424,8 @@ impl AgentGuardContract {
         storage::write_agent(&env, agent_id.clone(), &record);
 
         // Remove agent from current owner's list
-        let agents = storage::read_owner_agents(&env, current_owner.clone());
-        let mut new_list = Vec::new(&env);
-        for a in agents.iter() {
-            if a != agent_id {
-                new_list.push_back(a);
-            }
-        }
-        storage::write_owner_agents(&env, current_owner.clone(), &new_list);
-
-        // Add agent to new owner's list
-        let mut new_agents = storage::read_owner_agents(&env, new_owner.clone());
-        new_agents.push_back(agent_id.clone());
-        storage::write_owner_agents(&env, new_owner.clone(), &new_agents);
+        storage::remove_owner_agent(&env, current_owner.clone(), agent_id.clone());
+        storage::add_owner_agent(&env, new_owner.clone(), agent_id.clone());
 
         OwnershipTransferred { agent_id, from: current_owner, to: new_owner }.publish(&env);
 
