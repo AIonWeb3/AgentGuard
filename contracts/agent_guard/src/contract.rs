@@ -122,7 +122,7 @@ impl AgentGuardContract {
         // Add agent to owner's agent list
         storage::add_owner_agent(&env, owner.clone(), agent_id.clone());
 
-        AgentRegistered { agent_id, owner, name: metadata.name.clone() }.publish(&env);
+        AgentRegistered { agent_id, owner, name: metadata.name }.publish(&env);
 
         Ok(())
     }
@@ -253,6 +253,13 @@ impl AgentGuardContract {
     // =======================================================================
 
     /// Temporarily disable an agent (`Active → Suspended`).
+    ///
+    /// # Errors
+    /// - `Error::NotInitialized` if the contract hasn't been initialized.
+    /// - `Error::AgentNotFound` if no record exists for `agent_id`.
+    /// - `Error::NotAgentOwner` if `owner` doesn't own this agent.
+    /// - `Error::InvalidStateTransition` if the agent cannot be suspended.
+    /// - `Error::AgentRevoked` if the agent is permanently revoked.
     pub fn suspend_agent(env: Env, owner: Address, agent_id: Address) -> Result<(), Error> {
         Self::authorize_owner(&env, &owner)?;
         let mut record = Self::load_owned_agent(&env, &owner, agent_id.clone())?;
@@ -260,17 +267,19 @@ impl AgentGuardContract {
         record.status.can_transition_to(AgentStatus::Suspended)?;
         record.status = AgentStatus::Suspended;
         storage::write_agent(&env, agent_id.clone(), &record);
-        AgentSuspended {
-            agent_id,
-            owner,
-            previous_status,
-            new_status: AgentStatus::Suspended,
-        }
-        .publish(&env);
+        AgentSuspended { agent_id, owner, previous_status, new_status: AgentStatus::Suspended }
+            .publish(&env);
         Ok(())
     }
 
     /// Restore a suspended agent (`Suspended → Active`). Owner must authenticate.
+    ///
+    /// # Errors
+    /// - `Error::NotInitialized` if the contract hasn't been initialized.
+    /// - `Error::AgentNotFound` if no record exists for `agent_id`.
+    /// - `Error::NotAgentOwner` if `owner` doesn't own this agent.
+    /// - `Error::InvalidStateTransition` if the agent is not suspended.
+    /// - `Error::AgentRevoked` if the agent is permanently revoked.
     pub fn reactivate_agent(env: Env, owner: Address, agent_id: Address) -> Result<(), Error> {
         Self::authorize_owner(&env, &owner)?;
         let mut record = Self::load_owned_agent(&env, &owner, agent_id.clone())?;
@@ -278,17 +287,19 @@ impl AgentGuardContract {
         record.status.can_transition_to(AgentStatus::Active)?;
         record.status = AgentStatus::Active;
         storage::write_agent(&env, agent_id.clone(), &record);
-        AgentReactivated {
-            agent_id,
-            owner,
-            previous_status,
-            new_status: AgentStatus::Active,
-        }
-        .publish(&env);
+        AgentReactivated { agent_id, owner, previous_status, new_status: AgentStatus::Active }
+            .publish(&env);
         Ok(())
     }
 
     /// Permanently disable an agent. Cannot be reactivated.
+    ///
+    /// # Errors
+    /// - `Error::NotInitialized` if the contract hasn't been initialized.
+    /// - `Error::AgentNotFound` if no record exists for `agent_id`.
+    /// - `Error::NotAgentOwner` if `owner` doesn't own this agent.
+    /// - `Error::InvalidStateTransition` if the agent is already revoked.
+    /// - `Error::AgentRevoked` if the agent is already permanently revoked.
     pub fn revoke_agent(env: Env, owner: Address, agent_id: Address) -> Result<(), Error> {
         Self::authorize_owner(&env, &owner)?;
         let mut record = Self::load_owned_agent(&env, &owner, agent_id.clone())?;
@@ -296,13 +307,8 @@ impl AgentGuardContract {
         record.status.can_transition_to(AgentStatus::Revoked)?;
         record.status = AgentStatus::Revoked;
         storage::write_agent(&env, agent_id.clone(), &record);
-        AgentRevoked {
-            agent_id,
-            owner,
-            previous_status,
-            new_status: AgentStatus::Revoked,
-        }
-        .publish(&env);
+        AgentRevoked { agent_id, owner, previous_status, new_status: AgentStatus::Revoked }
+            .publish(&env);
         Ok(())
     }
 
