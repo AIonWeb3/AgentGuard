@@ -252,6 +252,11 @@ impl AgentGuardContract {
     // Status Management
     // =======================================================================
 
+    /// Temporarily disable an agent (`Active → Suspended`).
+    pub fn suspend_agent(env: Env, owner: Address, agent_id: Address) -> Result<(), Error> {
+        Self::set_agent_status(env, owner, agent_id, AgentStatus::Suspended)
+    }
+
     /// Update the operational status of a registered agent.
     ///
     /// Only the agent's registered owner may call this.
