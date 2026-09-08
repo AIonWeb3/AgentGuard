@@ -690,3 +690,16 @@ fn test_agent_metadata_rejects_empty_name() {
     };
     assert!(valid.validate().is_ok());
 }
+
+#[test]
+fn test_agent_record_owner_and_defaults() {
+    let env = Env::default();
+    let owner = Address::generate(&env);
+    let other = Address::generate(&env);
+    let record = crate::types::AgentRecord::new(&env, owner.clone(), AgentStatus::Active);
+    assert_eq!(record.owner, owner);
+    assert_eq!(record.roles.len(), 0);
+    assert_eq!(record.status, AgentStatus::Active);
+    assert!(record.require_owner(&owner).is_ok());
+    assert_eq!(record.require_owner(&other), Err(Error::NotAgentOwner));
+}

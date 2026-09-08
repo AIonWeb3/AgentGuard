@@ -15,7 +15,7 @@
 //! credentials — not ephemeral data like price feeds or session tokens.
 
 use crate::errors::Error;
-use soroban_sdk::{contracttype, Address, String, Vec};
+use soroban_sdk::{contracttype, Address, Env, String, Vec};
 
 // ---------------------------------------------------------------------------
 // Roles
@@ -110,6 +110,21 @@ pub struct AgentRecord {
     pub status: AgentStatus,
     /// Ledger timestamp at which the agent was first registered.
     pub registered_at: u64,
+}
+
+impl AgentRecord {
+    /// Create a new persistent record with no roles and the given status.
+    pub fn new(env: &Env, owner: Address, status: AgentStatus) -> Self {
+        Self { owner, roles: Vec::new(env), status, registered_at: env.ledger().timestamp() }
+    }
+
+    /// Fail unless `owner` matches the stored controller.
+    pub fn require_owner(&self, owner: &Address) -> Result<(), Error> {
+        if self.owner != *owner {
+            return Err(Error::NotAgentOwner);
+        }
+        Ok(())
+    }
 }
 
 // ---------------------------------------------------------------------------
