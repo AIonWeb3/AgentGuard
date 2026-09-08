@@ -672,3 +672,21 @@ fn test_agent_status_transition_rules() {
     assert!(AgentStatus::Active.is_active());
     assert!(AgentStatus::Revoked.is_revoked());
 }
+
+#[test]
+fn test_agent_metadata_rejects_empty_name() {
+    let env = Env::default();
+    let metadata = crate::types::AgentMetadata {
+        name: soroban_sdk::String::from_str(&env, ""),
+        description: soroban_sdk::String::from_str(&env, "ok"),
+        version: 1,
+    };
+    assert_eq!(metadata.validate(), Err(Error::InvalidMetadata));
+
+    let valid = crate::types::AgentMetadata {
+        name: soroban_sdk::String::from_str(&env, "OpsBot"),
+        description: soroban_sdk::String::from_str(&env, ""),
+        version: 0,
+    };
+    assert!(valid.validate().is_ok());
+}
