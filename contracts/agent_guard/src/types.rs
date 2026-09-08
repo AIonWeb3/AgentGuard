@@ -128,6 +128,16 @@ pub struct AgentMetadata {
     pub version: u32,
 }
 
+impl AgentMetadata {
+    /// Reject empty names. Description may be empty; version is unconstrained.
+    pub fn validate(&self) -> Result<(), Error> {
+        if self.name.is_empty() {
+            return Err(Error::InvalidMetadata);
+        }
+        Ok(())
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Storage Keys
 // ---------------------------------------------------------------------------
