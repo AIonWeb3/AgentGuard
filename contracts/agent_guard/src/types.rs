@@ -14,6 +14,7 @@
 //! **Temporary storage is intentionally avoided.** Agent identities are long-lived
 //! credentials — not ephemeral data like price feeds or session tokens.
 
+use crate::errors::Error;
 use soroban_sdk::{contracttype, Address, String, Vec};
 
 // ---------------------------------------------------------------------------
@@ -52,6 +53,41 @@ pub enum AgentStatus {
     Suspended = 1,
     /// Agent identity is permanently revoked.
     Revoked = 2,
+}
+
+impl AgentStatus {
+    /// Whether this status is operational (`Active` only).
+    #[must_use]
+    pub fn is_active(self) -> bool {
+        matches!(self, Self::Active)
+    }
+
+    /// Whether this identity is permanently disabled.
+    #[must_use]
+    pub fn is_revoked(self) -> bool {
+        matches!(self, Self::Revoked)
+    }
+
+    /// Validate a requested lifecycle transition.
+    ///
+    /// Allowed: `Active → Suspended`, `Suspended → Active`,
+    /// `Active → Revoked`, `Suspended → Revoked`.
+    /// `Revoked` is terminal.
+    pub fn can_transition_to(self, next: AgentStatus) -> Result<(), Error> {
+        if self == Self::Revoked {
+            return Err(Error::AgentRevoked);
+        }
+        if self == next {
+            return Err(Error::InvalidStateTransition);
+        }
+        match (self, next) {
+            (Self::Active, Self::Suspended)
+            | (Self::Active, Self::Revoked)
+            | (Self::Suspended, Self::Active)
+            | (Self::Suspended, Self::Revoked) => Ok(()),
+            _ => Err(Error::InvalidStateTransition),
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
