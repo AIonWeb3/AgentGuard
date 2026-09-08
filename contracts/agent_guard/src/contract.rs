@@ -107,10 +107,7 @@ impl AgentGuardContract {
         agent_id: Address,
         metadata: AgentMetadata,
     ) -> Result<(), Error> {
-        Self::require_initialized(&env)?;
-
-        // Only the owner can register agents under their account
-        owner.require_auth();
+        Self::authorize_owner(&env, &owner)?;
 
         // Guard: prevent duplicate registration
         if storage::has_agent(&env, agent_id.clone()) {
@@ -439,6 +436,13 @@ impl AgentGuardContract {
     // =======================================================================
     // Internal Storage Helpers
     // =======================================================================
+
+    /// Require initialization plus `owner.require_auth()`.
+    fn authorize_owner(env: &Env, owner: &Address) -> Result<(), Error> {
+        Self::require_initialized(env)?;
+        owner.require_auth();
+        Ok(())
+    }
 
     /// Asserts the contract has been initialized.
     fn require_initialized(env: &Env) -> Result<(), Error> {
