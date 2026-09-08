@@ -92,6 +92,13 @@ pub(crate) fn write_owner_agents(env: &Env, owner: Address, agents: &Vec<Address
     }
 }
 
+pub(crate) fn touch_owner_agents(env: &Env, owner: Address) {
+    let key = DataKey::OwnerAgents(owner);
+    if env.storage().persistent().has(&key) {
+        env.storage().persistent().extend_ttl(&key, TTL_THRESHOLD, TTL_EXTEND_TO);
+    }
+}
+
 /// Append `agent_id` if it is not already present. Preserves insertion order.
 pub(crate) fn add_owner_agent(env: &Env, owner: Address, agent_id: Address) {
     let mut agents = read_owner_agents(env, owner.clone());

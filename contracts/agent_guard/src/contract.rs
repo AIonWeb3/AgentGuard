@@ -422,10 +422,12 @@ impl AgentGuardContract {
 
     /// List all agent addresses registered under an owner.
     ///
-    /// Returns an empty vector if the owner has no agents.
+    /// Returns an empty vector if the owner has no agents (does not error).
     #[must_use]
     pub fn get_owner_agents(env: Env, owner: Address) -> Vec<Address> {
-        storage::read_owner_agents(&env, owner)
+        let agents = storage::read_owner_agents(&env, owner.clone());
+        storage::touch_owner_agents(&env, owner);
+        agents
     }
 
     // =======================================================================
