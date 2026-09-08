@@ -1,8 +1,7 @@
 /**
  * @agentguard/sdk
  *
- * Lightweight SDK for verifying AI agent identity and roles against the
- * AgentGuard Soroban smart contract on the Stellar network.
+ * Identity and RBAC client for the AgentGuard Soroban contract.
  *
  * @example
  * ```typescript
@@ -19,5 +18,29 @@
  * ```
  */
 
-export { AgentGuardClient, AgentUnauthorizedError, SimulationError } from "./agent-guard-client.js";
-export { Role, type AgentRecord, type AgentGuardConfig } from "./types.js";
+export {
+  AgentGuardClient,
+  AgentUnauthorizedError,
+  SimulationError,
+  TransactionError,
+} from "./agent-guard-client.js";
+export {
+  Role,
+  AgentStatus,
+  ROLE_LABELS,
+  STATUS_LABELS,
+  type AgentRecord,
+  type AgentMetadata,
+  type AgentProfile,
+  type AgentGuardConfig,
+  type TransactionSigner,
+  type SubmittedTransaction,
+} from "./types.js";
+export {
+  AGENT_HEADER,
+  enforceAgentRole,
+  requireRole,
+  type GuardRequest,
+  type GuardFailure,
+  type GuardResult,
+} from "./middleware.js";

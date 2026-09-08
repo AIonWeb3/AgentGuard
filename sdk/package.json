@@ -1,9 +1,19 @@
 {
   "name": "@agentguard/sdk",
-  "version": "0.1.0",
-  "description": "Lightweight SDK for verifying AI agent identity and roles against the AgentGuard Soroban contract",
+  "version": "0.2.0",
+  "description": "Identity and RBAC SDK for the AgentGuard Soroban contract",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf dist"

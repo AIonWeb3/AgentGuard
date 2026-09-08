@@ -32,6 +32,10 @@
 //! extension window.
 
 use crate::errors::Error;
+use crate::events::{
+    AgentDeregistered, AgentRegistered, MetadataUpdated, OwnershipTransferred, RoleGranted,
+    RoleRevoked, StatusChanged,
+};
 use crate::types::{AgentMetadata, AgentRecord, AgentStatus, DataKey, Role};
 use soroban_sdk::{contract, contractimpl, Address, Env, Vec};
 
@@ -134,8 +138,10 @@ impl AgentGuardContract {
 
         // Add agent to owner's agent list
         let mut agents = Self::read_owner_agents(&env, owner.clone());
-        agents.push_back(agent_id);
-        Self::write_owner_agents(&env, owner, &agents);
+        agents.push_back(agent_id.clone());
+        Self::write_owner_agents(&env, owner.clone(), &agents);
+
+        AgentRegistered { agent_id, owner }.publish(&env);
 
         Ok(())
     }
@@ -171,7 +177,9 @@ impl AgentGuardContract {
                 new_agents.push_back(a);
             }
         }
-        Self::write_owner_agents(&env, owner, &new_agents);
+        Self::write_owner_agents(&env, owner.clone(), &new_agents);
+
+        AgentDeregistered { agent_id, owner }.publish(&env);
 
         Ok(())
     }
@@ -214,7 +222,9 @@ impl AgentGuardContract {
 
         // Add the role and persist
         record.roles.push_back(role);
-        Self::write_agent(&env, agent_id, &record);
+        Self::write_agent(&env, agent_id.clone(), &record);
+
+        RoleGranted { agent_id, owner, role }.publish(&env);
 
         Ok(())
     }
@@ -257,7 +267,9 @@ impl AgentGuardContract {
         }
 
         record.roles = new_roles;
-        Self::write_agent(&env, agent_id, &record);
+        Self::write_agent(&env, agent_id.clone(), &record);
+
+        RoleRevoked { agent_id, owner, role }.publish(&env);
 
         Ok(())
     }
@@ -290,7 +302,9 @@ impl AgentGuardContract {
         }
 
         record.status = status;
-        Self::write_agent(&env, agent_id, &record);
+        Self::write_agent(&env, agent_id.clone(), &record);
+
+        StatusChanged { agent_id, owner, status }.publish(&env);
 
         Ok(())
     }
@@ -306,8 +320,11 @@ impl AgentGuardContract {
     /// - Resource provider backends (via the TypeScript SDK)
     /// - The `AgentPay` contract (via cross-contract invocation)
     ///
-    /// Returns `true` if the agent is registered AND holds the `required_role`.
-    /// Returns `false` for unregistered agents or missing roles (never panics).
+    /// Returns `true` if the agent is registered, Active, and holds a role that
+    /// is greater than or equal to `required_role` (`Admin` satisfies `Premium`
+    /// and `Basic`; `Premium` satisfies `Basic`).
+    /// Returns `false` for unregistered, suspended, or under-privileged agents
+    /// (never panics).
     #[must_use]
     pub fn verify_agent(env: Env, agent_id: Address, required_role: Role) -> bool {
         match Self::read_agent(&env, agent_id) {
@@ -316,7 +333,7 @@ impl AgentGuardContract {
                     return false;
                 }
                 for role in record.roles.iter() {
-                    if role == required_role {
+                    if role >= required_role {
                         return true;
                     }
                 }
@@ -336,6 +353,47 @@ impl AgentGuardContract {
     /// - `Error::AgentNotFound` if no record exists.
     pub fn get_agent(env: Env, agent_id: Address) -> Result<AgentRecord, Error> {
         Self::read_agent(&env, agent_id)
+    }
+
+    /// Retrieve the metadata associated with an agent.
+    ///
+    /// # Errors
+    /// - `Error::AgentNotFound` if no metadata exists.
+    pub fn get_agent_metadata(env: Env, agent_id: Address) -> Result<AgentMetadata, Error> {
+        Self::read_metadata(&env, agent_id)
+    }
+
+    /// Replace the metadata for a registered agent.
+    ///
+    /// # Errors
+    /// - `Error::AgentNotFound` if no record exists for `agent_id`.
+    /// - `Error::NotAgentOwner` if `owner` doesn't own this agent.
+    pub fn update_agent_metadata(
+        env: Env,
+        owner: Address,
+        agent_id: Address,
+        metadata: AgentMetadata,
+    ) -> Result<(), Error> {
+        Self::require_initialized(&env)?;
+        owner.require_auth();
+
+        let record = Self::read_agent(&env, agent_id.clone())?;
+        if record.owner != owner {
+            return Err(Error::NotAgentOwner);
+        }
+
+        Self::write_metadata(&env, agent_id.clone(), &metadata);
+        MetadataUpdated { agent_id, owner }.publish(&env);
+
+        Ok(())
+    }
+
+    /// Return the contract administrator address.
+    ///
+    /// # Errors
+    /// - `Error::NotInitialized` if the contract hasn't been initialized.
+    pub fn get_admin(env: Env) -> Result<Address, Error> {
+        env.storage().instance().get(&DataKey::Admin).ok_or(Error::NotInitialized)
     }
 
     /// List all agent addresses registered under an owner.
@@ -385,12 +443,14 @@ impl AgentGuardContract {
                 new_list.push_back(a);
             }
         }
-        Self::write_owner_agents(&env, current_owner, &new_list);
+        Self::write_owner_agents(&env, current_owner.clone(), &new_list);
 
         // Add agent to new owner's list
         let mut new_agents = Self::read_owner_agents(&env, new_owner.clone());
-        new_agents.push_back(agent_id);
-        Self::write_owner_agents(&env, new_owner, &new_agents);
+        new_agents.push_back(agent_id.clone());
+        Self::write_owner_agents(&env, new_owner.clone(), &new_agents);
+
+        OwnershipTransferred { agent_id, from: current_owner, to: new_owner }.publish(&env);
 
         Ok(())
     }
@@ -407,6 +467,11 @@ impl AgentGuardContract {
         let key = DataKey::AgentMetadata(agent_id);
         env.storage().persistent().set(&key, metadata);
         env.storage().persistent().extend_ttl(&key, TTL_THRESHOLD, TTL_EXTEND_TO);
+    }
+
+    fn read_metadata(env: &Env, agent_id: Address) -> Result<AgentMetadata, Error> {
+        let key = DataKey::AgentMetadata(agent_id);
+        env.storage().persistent().get(&key).ok_or(Error::AgentNotFound)
     }
 
     fn remove_metadata(env: &Env, agent_id: Address) {

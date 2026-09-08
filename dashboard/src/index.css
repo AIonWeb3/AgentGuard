@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Syne", sans-serif;
+  --font-sans: "Outfit", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --color-void: #06110c;
+  --color-forest: #0b1b14;
+  --color-panel: #10241b;
+  --color-line: #1e3d30;
+  --color-mint: #3ee0a0;
+  --color-mint-dim: #1c6b4e;
+  --color-ink: #e8f6ee;
+  --color-muted: #8aa597;
+  --color-gold: #e4c56b;
+  --color-danger: #e07a6a;
+  --color-info: #7ec8e8;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-void);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-mint) 35%, transparent);
+}
+
+.grid-bg {
+  background-image:
+    linear-gradient(to right, rgb(62 224 160 / 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(62 224 160 / 0.05) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, black 20%, transparent 75%);
+}
+
+.glow-mint {
+  box-shadow: 0 0 80px rgb(62 224 160 / 0.12);
+}
+
+.terminal-scan {
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      rgb(62 224 160 / 0.03) 0,
+      rgb(62 224 160 / 0.03) 1px,
+      transparent 1px,
+      transparent 4px
+    );
+}

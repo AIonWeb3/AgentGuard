@@ -23,10 +23,10 @@ use soroban_sdk::{contracttype, Address, String, Vec};
 /// Role hierarchy for agent access control.
 ///
 /// Roles are ordered by privilege level (`Basic < Premium < Admin`).
-/// The `verify_agent` function can leverage this ordering for "at least" checks
-/// (e.g., an agent with `Admin` implicitly satisfies a `Basic` requirement).
+/// `verify_agent` uses this ordering for "at least" checks: an agent with
+/// `Admin` implicitly satisfies a `Premium` or `Basic` requirement.
 #[contracttype]
-#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
 pub enum Role {
     /// Default role — grants access to basic resources.
@@ -43,7 +43,7 @@ pub enum Role {
 
 /// State machine for an agent's operational status.
 #[contracttype]
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 #[repr(u32)]
 pub enum AgentStatus {
     /// Agent is active and functioning normally.

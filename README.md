@@ -1,215 +1,153 @@
-# AgentGuard 🛡️
+# AgentGuard
 
-**On-Chain AI Identity & Role-Based Access Control Registry**
+**On-chain identity and role-based access control for autonomous AI agents.**
 
-AgentGuard is a [Stellar Soroban](https://soroban.stellar.org) smart contract that serves as the authentication layer for autonomous LLM agents. It enables human owners to register AI agents, assign granular roles, and provides a verification endpoint that resource providers and the [AgentPay](https://github.com/AIonWeb3/AgentPay) settlement contract call before granting access or executing financial operations.
+AgentGuard is a Stellar Soroban registry that lets a human owner register an AI agent, grant it a role, and lets any API or settlement contract (including [AgentPay](https://github.com/AIonWeb3/AgentPay)) verify that agent before work or money moves.
+
+This repo is a pitchable product, not just a contract:
+
+| Surface | What a client sees |
+|---|---|
+| **Operator console** | Register agents, grant roles, suspend, transfer, audit trail |
+| **Verifier** | Live `verify_agent` walkthrough (pass / fail) |
+| **TypeScript SDK** | Drop-in middleware for provider backends |
+| **Soroban contract** | Source of truth on Stellar, with a full test suite |
+
+---
+
+## Pitch the demo (60 seconds)
+
+```bash
+cd dashboard
+npm install
+npm run dev
+```
+
+Open http://localhost:5173 and click **Launch 60-second demo**. No testnet account required.
+
+Walkthrough:
+
+1. Console opens on a seeded fleet (Invoice, Treasury, Ops Admin, a suspended scraper).
+2. Open **Treasury Agent** → confirm it holds Premium.
+3. Go to **Verify** → call `verify_agent` with Premium → **AUTHORIZED**.
+4. Back on the agent, set status to **Suspended**.
+5. Run the same check → **DENIED**. That is the kill switch.
+
+Connect Freighter if you want the operator identity to be a real Stellar key. The demo registry still runs locally so the meeting cannot be blocked by RPC.
+
+---
+
+## Why this exists
+
+Autonomous agents are already calling APIs and initiating payments. Today that usually means a shared secret in a prompt, or the company's hot wallet. There is no identity, no role, and no way to freeze one bot without rotating everything.
+
+AgentGuard makes the agent a first-class on-chain principal:
+
+- Distinct key per agent
+- Roles: `Basic < Premium < Admin` (higher satisfies lower)
+- Status: `Active | Suspended | Revoked`
+- Read-only verification (simulation — no fee per API check)
+- Owner-signed mutations only
 
 ---
 
 ## Architecture
 
 ```
- ┌──────────────┐      register / grant_role      ┌────────────────┐
- │  Agent Owner  │ ──────────────────────────────► │  AgentGuard    │
- │  (Human)      │                                 │  Contract      │
- └──────────────┘                                 └───────┬────────┘
-                                                          │
-                             verify_agent (read-only)     │
- ┌──────────────┐                                         │
- │  AgentPay    │ ◄───────────────────────────────────────┘
- │  Contract    │     cross-contract call
+ ┌──────────────┐   register / grant / suspend    ┌────────────────┐
+ │  Agent owner │ ───────────────────────────────► │  AgentGuard    │
+ │  (human)     │                                  │  contract      │
+ └──────────────┘                                  └───────┬────────┘
+                                                           │
+                              verify_agent (read-only)     │
+ ┌──────────────┐                                          │
+ │  AgentPay    │ ◄────────────────────────────────────────┘
+ │  settlement  │     cross-contract call
  └──────────────┘
 
- ┌──────────────┐    verifyAgent (simulation)     ┌────────────────┐
- │  Resource    │ ──────────────────────────────► │  AgentGuard    │
- │  Provider    │    via @agentguard/sdk          │  Contract      │
- │  Backend     │                                 └────────────────┘
- └──────────────┘
+ ┌──────────────┐     X-Agent-Public-Key           ┌────────────────┐
+ │  Provider    │ ── requireAgent(Premium) ──────► │  @agentguard/  │
+ │  API         │                                  │  sdk           │
+ └──────────────┘                                  └────────────────┘
 ```
-
-### Storage Strategy
-
-| Data               | Storage Type | Rationale                                          |
-|--------------------|--------------|-----------------------------------------------------|
-| Contract admin     | Instance     | Tiny, loaded every invocation, never expires         |
-| Initialized flag   | Instance     | Guards double-init cheaply                           |
-| Agent records      | Persistent   | Must survive indefinitely; identity data is critical |
-| Owner → agent list | Persistent   | Supports enumeration, same longevity as records      |
-
-> **Temporary storage is intentionally avoided.** Agent identities are long-lived credentials, not ephemeral data.
 
 ---
 
-## Part 1: Soroban Smart Contract (Rust)
+## Contract
 
-### Prerequisites
-
-- **Rust** 1.84.0+ — `rustup update stable`
-- **Wasm target** — `rustup target add wasm32v1-none`
-- **Stellar CLI** — `cargo install --locked stellar-cli`
-
-### Build
+### Build and test
 
 ```bash
+rustup target add wasm32v1-none
+cargo test
 stellar contract build
 ```
 
-The optimized `.wasm` artifact is emitted to `target/wasm32v1-none/release/agent_guard.wasm`.
+### API
 
-### Test
+| Function | Auth | Description |
+|---|---|---|
+| `initialize(admin)` | admin | One-time setup |
+| `register_agent(owner, agent_id, metadata)` | owner | Register an agent with name / purpose / version |
+| `update_agent_metadata(...)` | owner | Update name, purpose, version |
+| `deregister_agent(owner, agent_id)` | owner | Remove the agent |
+| `grant_role` / `revoke_role` | owner | `Basic`, `Premium`, `Admin` |
+| `set_agent_status` | owner | `Active`, `Suspended`, `Revoked` |
+| `verify_agent(agent_id, required_role) → bool` | none | Active + role ≥ required |
+| `get_agent` / `get_agent_metadata` / `get_owner_agents` / `get_admin` | none | Reads |
+| `transfer_ownership` | current owner | Move the agent to another wallet |
+
+`verify_agent` never panics: unknown, suspended, or under-privileged agents return `false`.
+
+Indexed events fire on register, deregister, grant, revoke, status, metadata, and transfer.
+
+### Deploy (testnet)
 
 ```bash
-cargo test
-```
-
-### Deploy
-
-```bash
-# Deploy to testnet
 stellar contract deploy \
   --wasm target/wasm32v1-none/release/agent_guard.wasm \
   --network testnet \
   --source <YOUR_SECRET_KEY>
 ```
 
-### Contract API
-
-| Function | Auth | Description |
-|---|---|---|
-| `initialize(admin)` | admin | One-time setup — stores the contract administrator |
-| `register_agent(owner, agent_id)` | owner | Register a new AI agent under the owner's wallet |
-| `deregister_agent(owner, agent_id)` | owner | Remove an agent and its records |
-| `grant_role(owner, agent_id, role)` | owner | Assign a role (`Basic`, `Premium`, `Admin`) to an agent |
-| `revoke_role(owner, agent_id, role)` | owner | Remove a role from an agent |
-| `verify_agent(agent_id, required_role) → bool` | none | Check if an agent holds a specific role (read-only) |
-| `get_agent(agent_id) → AgentRecord` | none | Retrieve full agent record |
-| `get_owner_agents(owner) → Vec<Address>` | none | List all agents registered under an owner |
-| `transfer_ownership(current_owner, agent_id, new_owner)` | current_owner | Transfer agent to a new owner |
-
-### Roles
-
-```rust
-enum Role {
-    Basic   = 0,  // Default — access to basic resources
-    Premium = 1,  // Elevated — premium endpoints/resources
-    Admin   = 2,  // Full control
-}
-```
-
-### Cross-Contract Calls from AgentPay
-
-`verify_agent` is a **pure read** — no authorization or state mutation. This makes it ideal for cross-contract invocation with minimal gas overhead:
-
-```rust
-// In AgentPay's settlement function:
-let guard_client = AgentGuardClient::new(&env, &agent_guard_contract_id);
-let is_authorized: bool = guard_client.verify_agent(&agent_id, &required_role);
-if !is_authorized {
-    panic!("Agent not authorized for this settlement tier");
-}
-// ... proceed with payment
-```
+Then `initialize` once with the admin address.
 
 ---
 
-## Part 2: Provider SDK (TypeScript)
-
-### Install
+## SDK
 
 ```bash
 cd sdk
 npm install
+npm run build
 ```
 
-### Usage
-
-```typescript
-import { AgentGuardClient, Role } from "@agentguard/sdk";
+```ts
+import { AgentGuardClient, Role, requireRole } from "@agentguard/sdk";
 import { Networks } from "@stellar/stellar-sdk";
 
 const guard = new AgentGuardClient({
-  contractId: "CABC...XYZ",            // Your deployed AgentGuard contract
+  contractId: process.env.AGENTGUARD_ID!,
   rpcUrl: "https://soroban-testnet.stellar.org",
   networkPassphrase: Networks.TESTNET,
 });
 
-// Simple boolean check (read-only simulation — no fees)
-const isAuthorized = await guard.verifyAgent(agentPublicKey, Role.Premium);
-console.log(`Agent authorized: ${isAuthorized}`);
-
-// Middleware-style enforcement (throws on failure)
-try {
-  await guard.requireAgent(agentPublicKey, Role.Premium);
-  // Agent is verified — proceed with request
-} catch (error) {
-  if (error instanceof AgentUnauthorizedError) {
-    res.status(403).json({ error: error.message });
-  }
-}
-
-// Fetch full agent record
-const record = await guard.getAgent(agentPublicKey);
-if (record) {
-  console.log(`Owner: ${record.owner}`);
-  console.log(`Roles: ${record.roles}`);
-  console.log(`Registered at: ${record.registeredAt}`);
-}
+app.post("/v1/premium", requireRole(guard, Role.Premium), handler);
 ```
 
-### Express Middleware Example
+Reads use simulation (no fees). Writes assemble a Soroban transaction, accept any `TransactionSigner` (Freighter, backend keypair), submit, and wait for confirmation.
 
-```typescript
-import { AgentGuardClient, Role, AgentUnauthorizedError } from "@agentguard/sdk";
-
-const guard = new AgentGuardClient({ /* config */ });
-
-function requireRole(role: Role) {
-  return async (req, res, next) => {
-    const agentKey = req.headers["x-agent-public-key"];
-    if (!agentKey) {
-      return res.status(401).json({ error: "Missing X-Agent-Public-Key header" });
-    }
-    try {
-      await guard.requireAgent(agentKey, role);
-      next();
-    } catch (error) {
-      if (error instanceof AgentUnauthorizedError) {
-        return res.status(403).json({ error: error.message });
-      }
-      return res.status(500).json({ error: "Verification service unavailable" });
-    }
-  };
-}
-
-// Usage:
-app.post("/api/premium-endpoint", requireRole(Role.Premium), handler);
-```
+A copy-paste HTTP gateway lives in `examples/provider-gateway`.
 
 ---
 
-## Project Structure
+## Project layout
 
 ```
-AgentGuard/
-├── Cargo.toml                          # Workspace root
-├── contracts/
-│   └── agent_guard/
-│       ├── Cargo.toml                  # Contract crate manifest
-│       └── src/
-│           ├── lib.rs                  # Module root
-│           ├── types.rs                # Data types & storage keys
-│           ├── errors.rs               # Error definitions
-│           ├── contract.rs             # Core contract logic
-│           └── test.rs                 # Test suite
-├── sdk/
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── src/
-│       ├── index.ts                    # Barrel exports
-│       ├── types.ts                    # TypeScript type definitions
-│       └── agent-guard-client.ts       # Verification client
-├── README.md
-└── LICENSE
+contracts/agent_guard/   Soroban contract + tests
+sdk/                     TypeScript client + Express-style middleware
+dashboard/               Pitch console (Vite + React)
+examples/provider-gateway
 ```
 
 ---

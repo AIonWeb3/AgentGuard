@@ -1,0 +1,9 @@
+{
+  "name": "@agentguard/provider-gateway-example",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  }
+}
