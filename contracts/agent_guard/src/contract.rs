@@ -281,7 +281,11 @@ impl AgentGuardContract {
         role: Role,
     ) -> Result<(), Error> {
         Self::authorize_owner(&env, &owner)?;
-        let _ = (agent_id, resource_id, role);
+        let record = storage::read_agent(&env, agent_id.clone())?;
+        if record.owner != owner {
+            return Err(Error::Unauthorized);
+        }
+        let _ = (resource_id, role);
         Ok(())
     }
 
