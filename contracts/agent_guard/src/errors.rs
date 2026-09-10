@@ -42,4 +42,10 @@ pub enum Error {
 
     /// Agent metadata failed validation (for example an empty name).
     InvalidMetadata = 11,
+
+    /// The permission exists but `expires_at` is not after the current ledger time.
+    RoleExpired = 12,
+
+    /// Expiration timestamp is not strictly in the future.
+    InvalidExpiration = 13,
 }
