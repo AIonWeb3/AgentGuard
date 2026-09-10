@@ -1134,3 +1134,19 @@ fn test_check_access_false_when_revoked() {
     client.revoke_agent(&owner, &agent);
     assert!(!client.check_access(&agent, &resource, &Role::Premium));
 }
+
+
+#[test]
+fn test_e2e_register_grant_check_suspend_reactivate() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let agent = Address::generate(&env);
+    let resource = sample_resource(&env);
+    client.register_agent(&owner, &agent, &sample_metadata(&env, "E2E"));
+    client.grant_permission(&owner, &agent, &resource, &Role::Premium, &future_expiry(&env));
+    assert!(client.check_access(&agent, &resource, &Role::Premium));
+    client.suspend_agent(&owner, &agent);
+    assert!(!client.check_access(&agent, &resource, &Role::Premium));
+    client.reactivate_agent(&owner, &agent);
+    assert!(client.check_access(&agent, &resource, &Role::Premium));
+}
