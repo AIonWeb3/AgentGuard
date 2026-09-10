@@ -9,7 +9,7 @@ on:
 # Branch protection required checks:
 # - Contract tests (cargo test)
 # - Contract clippy (cargo clippy -- -D warnings)
-# - Contract fmt (cargo fmt -- --check)
+# - Contract fmt (cargo fmt --all -- --check)
 # - Contract gates
 jobs:
   fmt:
