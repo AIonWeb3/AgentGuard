@@ -873,3 +873,18 @@ fn test_write_permission_saves_state() {
     });
     assert!(stored);
 }
+
+#[test]
+fn test_read_permission_returns_saved_state() {
+    let env = Env::default();
+    let contract_id = env.register(crate::contract::AgentGuardContract, ());
+    let agent = Address::generate(&env);
+    let resource = sample_resource(&env);
+    let permission = crate::types::Permission::new(Role::Premium, resource.clone(), 77);
+    let loaded = env.as_contract(&contract_id, || {
+        crate::storage::write_permission(&env, agent.clone(), &permission);
+        crate::storage::read_permission(&env, agent.clone(), resource.clone(), Role::Premium)
+            .unwrap()
+    });
+    assert_eq!(loaded, permission);
+}
