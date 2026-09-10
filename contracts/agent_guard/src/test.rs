@@ -6,7 +6,10 @@
 use crate::contract::AgentGuardContractClient;
 use crate::errors::Error;
 use crate::types::{AgentMetadata, AgentStatus, Role};
-use soroban_sdk::{testutils::{Address as _, Events, Ledger}, Address, Env, String};
+use soroban_sdk::{
+    testutils::{Address as _, Events, Ledger},
+    Address, Env, String,
+};
 
 fn sample_metadata(env: &Env, name: &str) -> AgentMetadata {
     AgentMetadata {
@@ -1135,7 +1138,6 @@ fn test_check_access_false_when_revoked() {
     assert!(!client.check_access(&agent, &resource, &Role::Premium));
 }
 
-
 #[test]
 fn test_e2e_register_grant_check_suspend_reactivate() {
     let (env, client, _admin) = setup();
@@ -1150,7 +1152,6 @@ fn test_e2e_register_grant_check_suspend_reactivate() {
     client.reactivate_agent(&owner, &agent);
     assert!(client.check_access(&agent, &resource, &Role::Premium));
 }
-
 
 #[test]
 fn test_e2e_grant_then_expire() {

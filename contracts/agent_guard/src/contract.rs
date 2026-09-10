@@ -240,6 +240,12 @@ impl AgentGuardContract {
     }
 
     /// Grant a time-bounded role on a resource. Overwrites an existing grant.
+    ///
+    /// # Errors
+    /// - `Error::NotInitialized` if the contract hasn't been initialized.
+    /// - `Error::InvalidExpiration` if `expires_at` is not after ledger time.
+    /// - `Error::AgentNotFound` if no record exists for `agent_id`.
+    /// - `Error::Unauthorized` if `owner` does not own this agent.
     pub fn grant_permission(
         env: Env,
         owner: Address,
@@ -260,6 +266,12 @@ impl AgentGuardContract {
     }
 
     /// Revoke a resource-scoped role before it expires.
+    ///
+    /// # Errors
+    /// - `Error::NotInitialized` if the contract hasn't been initialized.
+    /// - `Error::AgentNotFound` if no record exists for `agent_id`.
+    /// - `Error::Unauthorized` if `owner` does not own this agent.
+    /// - `Error::RoleNotFound` if no matching permission exists.
     pub fn revoke_permission(
         env: Env,
         owner: Address,

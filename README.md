@@ -91,14 +91,39 @@ stellar contract build
 | `register_agent(owner, agent_id, metadata)` | owner | Register an agent with name / purpose / version (`Active`) |
 | `update_agent_metadata(...)` | owner | Update name, purpose, version |
 | `deregister_agent(owner, agent_id)` | owner | Remove the agent |
-| `grant_role` / `revoke_role` | owner | `Basic`, `Premium`, `Admin` |
+| `grant_role` / `revoke_role` | owner | Agent-wide `Basic`, `Premium`, `Admin` |
+| `grant_permission` / `revoke_permission` | owner | Time-bounded role on a `ResourceId` (`Symbol`) |
 | `suspend_agent` / `reactivate_agent` / `revoke_agent` | owner | Kill switch (`Active` ⇄ `Suspended` → `Revoked`) |
 | `set_agent_status` | owner | Same state machine as the dedicated kill switches |
 | `verify_agent(agent_id, required_role) → bool` | none | Active + role ≥ required |
+| `check_access(agent_id, resource_id, role) → bool` | none | Active + unexpired resource permission |
 | `get_agent` / `get_agent_metadata` / `get_owner_agents` / `get_admin` | none | Reads |
 | `transfer_ownership` | current owner | Move the agent to another wallet |
 
 `verify_agent` never panics: unknown, suspended, or under-privileged agents return `false`.
+
+Resource providers should call `check_access` (pure read / simulation — no fee) before serving a protected API:
+
+```bash
+stellar contract invoke \
+  --id "$AGENTGUARD_CONTRACT_ID" \
+  --source-account "$STELLAR_IDENTITY" \
+  --network testnet \
+  -- \
+  check_access \
+  --agent-id "$AGENT" \
+  --resource-id premium_api \
+  --role Premium
+```
+
+```rust
+let allowed: bool = guard_client.check_access(&agent_id, &resource_id, &Role::Premium);
+if !allowed {
+    panic!("agent is not authorized for this resource");
+}
+```
+
+`check_access` returns `false` when the permission is missing, expired, or the agent is `Suspended` / `Revoked`. Owners grant with `grant_permission(..., expires_at)` where `expires_at` is a ledger timestamp strictly in the future.
 
 Indexed events fire on register, deregister, grant, revoke, status, metadata, and transfer.
 
