@@ -62,6 +62,12 @@ pub fn has_permission(env: &Env, agent_id: Address, resource_id: ResourceId, rol
     env.storage().persistent().has(&key)
 }
 
+/// Current ledger close timestamp.
+#[must_use]
+pub fn ledger_timestamp(env: &Env) -> u64 {
+    env.ledger().timestamp()
+}
+
 pub fn read_metadata(env: &Env, agent_id: Address) -> Result<AgentMetadata, Error> {
     let key = DataKey::AgentMetadata(agent_id);
     env.storage().persistent().get(&key).ok_or(Error::AgentNotFound)
