@@ -888,3 +888,20 @@ fn test_read_permission_returns_saved_state() {
     });
     assert_eq!(loaded, permission);
 }
+
+#[test]
+fn test_delete_permission_missing_key_is_ok() {
+    let env = Env::default();
+    let contract_id = env.register(crate::contract::AgentGuardContract, ());
+    let agent = Address::generate(&env);
+    let resource = sample_resource(&env);
+    env.as_contract(&contract_id, || {
+        crate::storage::delete_permission(&env, agent.clone(), resource.clone(), Role::Admin);
+        assert!(!crate::storage::has_permission(
+            &env,
+            agent.clone(),
+            resource.clone(),
+            Role::Admin
+        ));
+    });
+}
