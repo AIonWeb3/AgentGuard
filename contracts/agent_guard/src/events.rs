@@ -1,6 +1,6 @@
 //! On-chain events emitted by AgentGuard for indexers and audit trails.
 
-use crate::types::{AgentStatus, Role};
+use crate::types::{AgentStatus, ResourceId, Role};
 use soroban_sdk::{contractevent, Address, String};
 
 #[contractevent]
@@ -96,4 +96,16 @@ pub struct OwnershipTransferred {
     pub agent_id: Address,
     pub from: Address,
     pub to: Address,
+}
+
+#[contractevent]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResourceRoleGranted {
+    #[topic]
+    pub agent_id: Address,
+    #[topic]
+    pub resource_id: ResourceId,
+    pub owner: Address,
+    pub role: Role,
+    pub expires_at: u64,
 }
