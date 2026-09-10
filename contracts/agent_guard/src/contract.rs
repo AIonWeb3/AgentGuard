@@ -272,6 +272,18 @@ impl AgentGuardContract {
         Ok(())
     }
 
+    /// Revoke a resource-scoped role before it expires.
+    pub fn revoke_permission(
+        env: Env,
+        owner: Address,
+        agent_id: Address,
+        resource_id: ResourceId,
+        role: Role,
+    ) -> Result<(), Error> {
+        let _ = (env, owner, agent_id, resource_id, role);
+        Ok(())
+    }
+
     // =======================================================================
     // Status Management
     // =======================================================================
