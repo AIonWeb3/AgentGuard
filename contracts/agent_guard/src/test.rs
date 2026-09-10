@@ -1097,3 +1097,16 @@ fn test_check_access_false_when_missing() {
     client.register_agent(&owner, &agent, &sample_metadata(&env, "RBAC"));
     assert!(!client.check_access(&agent, &resource, &Role::Premium));
 }
+
+#[test]
+fn test_check_access_false_when_expired() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let agent = Address::generate(&env);
+    let resource = sample_resource(&env);
+    client.register_agent(&owner, &agent, &sample_metadata(&env, "RBAC"));
+    let expires_at = crate::storage::ledger_timestamp(&env).saturating_add(5);
+    client.grant_permission(&owner, &agent, &resource, &Role::Premium, &expires_at);
+    env.ledger().set_timestamp(expires_at);
+    assert!(!client.check_access(&agent, &resource, &Role::Premium));
+}
