@@ -280,7 +280,10 @@ impl AgentGuardContract {
     /// Whether the agent holds an unexpired role on `resource_id`.
     #[must_use]
     pub fn check_access(env: Env, agent_id: Address, resource_id: ResourceId, role: Role) -> bool {
-        storage::read_permission(&env, agent_id, resource_id, role).is_ok()
+        let Ok(permission) = storage::read_permission(&env, agent_id, resource_id, role) else {
+            return false;
+        };
+        !permission.is_expired(storage::ledger_timestamp(&env))
     }
 
     // =======================================================================
