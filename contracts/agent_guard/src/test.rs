@@ -1150,3 +1150,18 @@ fn test_e2e_register_grant_check_suspend_reactivate() {
     client.reactivate_agent(&owner, &agent);
     assert!(client.check_access(&agent, &resource, &Role::Premium));
 }
+
+
+#[test]
+fn test_e2e_grant_then_expire() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let agent = Address::generate(&env);
+    let resource = sample_resource(&env);
+    client.register_agent(&owner, &agent, &sample_metadata(&env, "E2E"));
+    let expires_at = crate::storage::ledger_timestamp(&env).saturating_add(25);
+    client.grant_permission(&owner, &agent, &resource, &Role::Admin, &expires_at);
+    assert!(client.check_access(&agent, &resource, &Role::Admin));
+    env.ledger().set_timestamp(expires_at.saturating_add(1));
+    assert!(!client.check_access(&agent, &resource, &Role::Admin));
+}
