@@ -1122,3 +1122,15 @@ fn test_check_access_false_when_suspended() {
     client.suspend_agent(&owner, &agent);
     assert!(!client.check_access(&agent, &resource, &Role::Premium));
 }
+
+#[test]
+fn test_check_access_false_when_revoked() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let agent = Address::generate(&env);
+    let resource = sample_resource(&env);
+    client.register_agent(&owner, &agent, &sample_metadata(&env, "RBAC"));
+    client.grant_permission(&owner, &agent, &resource, &Role::Premium, &future_expiry(&env));
+    client.revoke_agent(&owner, &agent);
+    assert!(!client.check_access(&agent, &resource, &Role::Premium));
+}
