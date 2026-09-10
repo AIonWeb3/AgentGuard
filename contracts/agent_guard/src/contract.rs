@@ -261,7 +261,10 @@ impl AgentGuardContract {
         if expires_at <= storage::ledger_timestamp(&env) {
             return Err(Error::InvalidExpiration);
         }
-        let _record = storage::read_agent(&env, agent_id.clone())?;
+        let record = storage::read_agent(&env, agent_id.clone())?;
+        if record.owner != owner {
+            return Err(Error::Unauthorized);
+        }
         let _ = (resource_id, role);
         Ok(())
     }
