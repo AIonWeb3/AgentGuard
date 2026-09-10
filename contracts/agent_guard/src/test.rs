@@ -1110,3 +1110,15 @@ fn test_check_access_false_when_expired() {
     env.ledger().set_timestamp(expires_at);
     assert!(!client.check_access(&agent, &resource, &Role::Premium));
 }
+
+#[test]
+fn test_check_access_false_when_suspended() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let agent = Address::generate(&env);
+    let resource = sample_resource(&env);
+    client.register_agent(&owner, &agent, &sample_metadata(&env, "RBAC"));
+    client.grant_permission(&owner, &agent, &resource, &Role::Premium, &future_expiry(&env));
+    client.suspend_agent(&owner, &agent);
+    assert!(!client.check_access(&agent, &resource, &Role::Premium));
+}
