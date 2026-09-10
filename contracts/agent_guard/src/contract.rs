@@ -181,12 +181,7 @@ impl AgentGuardContract {
         Self::require_initialized(&env)?;
         owner.require_auth();
 
-        let mut record = storage::read_agent(&env, agent_id.clone())?;
-
-        // Ownership check
-        if record.owner != owner {
-            return Err(Error::NotAgentOwner);
-        }
+        let mut record = Self::load_owned_agent(&env, &owner, agent_id.clone())?;
 
         // Check for duplicate role
         for existing_role in record.roles.iter() {
@@ -219,12 +214,7 @@ impl AgentGuardContract {
         Self::require_initialized(&env)?;
         owner.require_auth();
 
-        let mut record = storage::read_agent(&env, agent_id.clone())?;
-
-        // Ownership check
-        if record.owner != owner {
-            return Err(Error::NotAgentOwner);
-        }
+        let mut record = Self::load_owned_agent(&env, &owner, agent_id.clone())?;
 
         // Find and remove the role
         let mut found = false;
@@ -262,10 +252,7 @@ impl AgentGuardContract {
         if expires_at <= storage::ledger_timestamp(&env) {
             return Err(Error::InvalidExpiration);
         }
-        let record = storage::read_agent(&env, agent_id.clone())?;
-        if record.owner != owner {
-            return Err(Error::Unauthorized);
-        }
+        let _record = Self::load_owned_agent_for_rbac(&env, &owner, agent_id.clone())?;
         let permission = Permission::new(role, resource_id.clone(), expires_at);
         storage::write_permission(&env, agent_id.clone(), &permission);
         ResourceRoleGranted { agent_id, resource_id, owner, role, expires_at }.publish(&env);
@@ -281,10 +268,7 @@ impl AgentGuardContract {
         role: Role,
     ) -> Result<(), Error> {
         Self::authorize_owner(&env, &owner)?;
-        let record = storage::read_agent(&env, agent_id.clone())?;
-        if record.owner != owner {
-            return Err(Error::Unauthorized);
-        }
+        let _record = Self::load_owned_agent_for_rbac(&env, &owner, agent_id.clone())?;
         if !storage::has_permission(&env, agent_id.clone(), resource_id.clone(), role) {
             return Err(Error::RoleNotFound);
         }
@@ -543,6 +527,18 @@ impl AgentGuardContract {
     ) -> Result<AgentRecord, Error> {
         let record = storage::read_agent(env, agent_id)?;
         record.require_owner(owner)?;
+        Ok(record)
+    }
+
+    fn load_owned_agent_for_rbac(
+        env: &Env,
+        owner: &Address,
+        agent_id: Address,
+    ) -> Result<AgentRecord, Error> {
+        let record = storage::read_agent(env, agent_id)?;
+        if record.owner != *owner {
+            return Err(Error::Unauthorized);
+        }
         Ok(record)
     }
 
