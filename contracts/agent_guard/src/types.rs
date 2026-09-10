@@ -172,3 +172,16 @@ impl AgentMetadata {
         Ok(())
     }
 }
+
+// ---------------------------------------------------------------------------
+// Resource permissions (Phase 2 RBAC)
+// ---------------------------------------------------------------------------
+
+/// A time-bounded role grant on a specific resource.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Permission {
+    pub role: Role,
+    pub resource_id: ResourceId,
+    pub expires_at: u64,
+}
