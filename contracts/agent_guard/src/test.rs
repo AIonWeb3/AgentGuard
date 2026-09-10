@@ -855,3 +855,21 @@ fn test_permission_struct_instantiation() {
     assert!(!permission.is_expired(41));
     assert_eq!(Role::Admin.as_u32(), 2);
 }
+
+fn sample_resource(env: &Env) -> crate::types::ResourceId {
+    soroban_sdk::Symbol::new(env, "premium_api")
+}
+
+#[test]
+fn test_write_permission_saves_state() {
+    let env = Env::default();
+    let contract_id = env.register(crate::contract::AgentGuardContract, ());
+    let agent = Address::generate(&env);
+    let resource = sample_resource(&env);
+    let permission = crate::types::Permission::new(Role::Basic, resource.clone(), 99);
+    let stored = env.as_contract(&contract_id, || {
+        crate::storage::write_permission(&env, agent.clone(), &permission);
+        crate::storage::has_permission(&env, agent.clone(), resource.clone(), Role::Basic)
+    });
+    assert!(stored);
+}
