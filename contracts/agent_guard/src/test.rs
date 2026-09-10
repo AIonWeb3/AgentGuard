@@ -1008,3 +1008,18 @@ fn test_grant_permission_emits_event() {
     client.grant_permission(&owner, &agent, &resource, &Role::Admin, &future_expiry(&env));
     assert!(!env.events().all().events().is_empty());
 }
+
+#[test]
+fn test_revoke_permission_succeeds() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let agent = Address::generate(&env);
+    let resource = sample_resource(&env);
+    client.register_agent(&owner, &agent, &sample_metadata(&env, "RBAC"));
+    client.grant_permission(&owner, &agent, &resource, &Role::Premium, &future_expiry(&env));
+    client.revoke_permission(&owner, &agent, &resource, &Role::Premium);
+    let stored = env.as_contract(&client.address, || {
+        crate::storage::has_permission(&env, agent.clone(), resource.clone(), Role::Premium)
+    });
+    assert!(!stored);
+}
