@@ -1036,3 +1036,14 @@ fn test_revoke_permission_unauthorized_fails() {
     client.grant_permission(&owner, &agent, &resource, &Role::Premium, &future_expiry(&env));
     client.revoke_permission(&attacker, &agent, &resource, &Role::Premium);
 }
+
+#[test]
+#[should_panic(expected = "Error(Contract, #7)")]
+fn test_revoke_permission_not_found_fails() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let agent = Address::generate(&env);
+    let resource = sample_resource(&env);
+    client.register_agent(&owner, &agent, &sample_metadata(&env, "RBAC"));
+    client.revoke_permission(&owner, &agent, &resource, &Role::Premium);
+}
