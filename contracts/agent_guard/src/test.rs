@@ -945,3 +945,15 @@ fn test_grant_permission_succeeds() {
     });
     assert!(stored);
 }
+
+#[test]
+#[should_panic(expected = "Error(Contract, #8)")]
+fn test_grant_permission_unauthorized_fails() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let attacker = Address::generate(&env);
+    let agent = Address::generate(&env);
+    let resource = sample_resource(&env);
+    client.register_agent(&owner, &agent, &sample_metadata(&env, "RBAC"));
+    client.grant_permission(&attacker, &agent, &resource, &Role::Premium, &future_expiry(&env));
+}
