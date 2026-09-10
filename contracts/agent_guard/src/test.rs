@@ -927,3 +927,21 @@ fn test_permission_storage_read_write_delete_roundtrip() {
         );
     });
 }
+
+fn future_expiry(env: &Env) -> u64 {
+    crate::storage::ledger_timestamp(env).saturating_add(10_000)
+}
+
+#[test]
+fn test_grant_permission_succeeds() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let agent = Address::generate(&env);
+    let resource = sample_resource(&env);
+    client.register_agent(&owner, &agent, &sample_metadata(&env, "RBAC"));
+    client.grant_permission(&owner, &agent, &resource, &Role::Premium, &future_expiry(&env));
+    let stored = env.as_contract(&client.address, || {
+        crate::storage::has_permission(&env, agent.clone(), resource.clone(), Role::Premium)
+    });
+    assert!(stored);
+}
