@@ -979,3 +979,21 @@ fn test_grant_permission_invalid_expiration_fails() {
     let now = crate::storage::ledger_timestamp(&env);
     client.grant_permission(&owner, &agent, &resource, &Role::Premium, &now);
 }
+
+#[test]
+fn test_grant_permission_overwrites_expiration() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let agent = Address::generate(&env);
+    let resource = sample_resource(&env);
+    client.register_agent(&owner, &agent, &sample_metadata(&env, "RBAC"));
+    let first = crate::storage::ledger_timestamp(&env).saturating_add(50);
+    let second = first.saturating_add(50);
+    client.grant_permission(&owner, &agent, &resource, &Role::Premium, &first);
+    client.grant_permission(&owner, &agent, &resource, &Role::Premium, &second);
+    let stored = env.as_contract(&client.address, || {
+        crate::storage::read_permission(&env, agent.clone(), resource.clone(), Role::Premium)
+            .unwrap()
+    });
+    assert_eq!(stored.expires_at, second);
+}
