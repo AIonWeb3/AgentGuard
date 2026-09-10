@@ -185,3 +185,12 @@ pub struct Permission {
     pub resource_id: ResourceId,
     pub expires_at: u64,
 }
+
+/// Composite key for a single permission entry in persistent storage.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PermissionKey {
+    pub agent_id: Address,
+    pub resource_id: ResourceId,
+    pub role: Role,
+}
