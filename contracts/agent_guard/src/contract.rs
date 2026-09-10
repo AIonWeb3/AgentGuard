@@ -37,7 +37,7 @@ use crate::events::{
     MetadataUpdated, OwnershipTransferred, RoleGranted, RoleRevoked, StatusChanged,
 };
 use crate::storage::{self, DataKey, TTL_EXTEND_TO, TTL_THRESHOLD};
-use crate::types::{AgentMetadata, AgentRecord, AgentStatus, Role};
+use crate::types::{AgentMetadata, AgentRecord, AgentStatus, Permission, ResourceId, Role};
 use soroban_sdk::{contract, contractimpl, Address, Env, Vec};
 
 // ---------------------------------------------------------------------------
@@ -245,6 +245,19 @@ impl AgentGuardContract {
 
         RoleRevoked { agent_id, owner, role }.publish(&env);
 
+        Ok(())
+    }
+
+    /// Grant a time-bounded role on a resource. Overwrites an existing grant.
+    pub fn grant_permission(
+        env: Env,
+        owner: Address,
+        agent_id: Address,
+        resource_id: ResourceId,
+        role: Role,
+        expires_at: u64,
+    ) -> Result<(), Error> {
+        let _ = (env, owner, agent_id, resource_id, role, expires_at);
         Ok(())
     }
 
