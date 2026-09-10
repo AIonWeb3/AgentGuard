@@ -6,7 +6,7 @@
 use crate::contract::AgentGuardContractClient;
 use crate::errors::Error;
 use crate::types::{AgentMetadata, AgentStatus, Role};
-use soroban_sdk::{testutils::Address as _, Address, Env, String};
+use soroban_sdk::{testutils::{Address as _, Events, Ledger}, Address, Env, String};
 
 fn sample_metadata(env: &Env, name: &str) -> AgentMetadata {
     AgentMetadata {
@@ -996,4 +996,15 @@ fn test_grant_permission_overwrites_expiration() {
             .unwrap()
     });
     assert_eq!(stored.expires_at, second);
+}
+
+#[test]
+fn test_grant_permission_emits_event() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let agent = Address::generate(&env);
+    let resource = sample_resource(&env);
+    client.register_agent(&owner, &agent, &sample_metadata(&env, "RBAC"));
+    client.grant_permission(&owner, &agent, &resource, &Role::Admin, &future_expiry(&env));
+    assert!(!env.events().all().events().is_empty());
 }
