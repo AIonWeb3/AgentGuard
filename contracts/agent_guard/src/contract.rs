@@ -257,10 +257,11 @@ impl AgentGuardContract {
         role: Role,
         expires_at: u64,
     ) -> Result<(), Error> {
+        Self::authorize_owner(&env, &owner)?;
         if expires_at <= storage::ledger_timestamp(&env) {
             return Err(Error::InvalidExpiration);
         }
-        let _ = (owner, agent_id, resource_id, role);
+        let _ = (agent_id, resource_id, role);
         Ok(())
     }
 
