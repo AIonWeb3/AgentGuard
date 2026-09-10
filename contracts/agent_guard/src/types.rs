@@ -38,6 +38,14 @@ pub enum Role {
     Admin = 2,
 }
 
+impl Role {
+    /// Stable ABI discriminant for this role.
+    #[must_use]
+    pub const fn as_u32(self) -> u32 {
+        self as u32
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Agent Status
 // ---------------------------------------------------------------------------
