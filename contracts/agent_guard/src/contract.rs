@@ -277,7 +277,9 @@ impl AgentGuardContract {
         Ok(())
     }
 
-    /// Whether the agent holds an unexpired role on `resource_id`.
+    /// Whether the agent is Active and holds an unexpired role on `resource_id`.
+    ///
+    /// Pure read: no auth, no TTL bump, at most one agent read and one permission read.
     #[must_use]
     pub fn check_access(env: Env, agent_id: Address, resource_id: ResourceId, role: Role) -> bool {
         let Ok(record) = storage::read_agent(&env, agent_id.clone()) else {
