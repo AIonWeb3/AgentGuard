@@ -1059,3 +1059,20 @@ fn test_revoke_permission_emits_event() {
     client.revoke_permission(&owner, &agent, &resource, &Role::Premium);
     assert!(!env.events().all().events().is_empty());
 }
+
+#[test]
+fn test_grant_then_revoke_permission_integration() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let agent = Address::generate(&env);
+    let resource = sample_resource(&env);
+    client.register_agent(&owner, &agent, &sample_metadata(&env, "RBAC"));
+    client.grant_permission(&owner, &agent, &resource, &Role::Basic, &future_expiry(&env));
+    assert!(env.as_contract(&client.address, || {
+        crate::storage::has_permission(&env, agent.clone(), resource.clone(), Role::Basic)
+    }));
+    client.revoke_permission(&owner, &agent, &resource, &Role::Basic);
+    assert!(!env.as_contract(&client.address, || {
+        crate::storage::has_permission(&env, agent.clone(), resource.clone(), Role::Basic)
+    }));
+}
