@@ -34,7 +34,8 @@
 use crate::errors::Error;
 use crate::events::{
     AgentDeregistered, AgentReactivated, AgentRegistered, AgentRevoked, AgentSuspended,
-    MetadataUpdated, OwnershipTransferred, RoleGranted, RoleRevoked, StatusChanged,
+    MetadataUpdated, OwnershipTransferred, ResourceRoleGranted, RoleGranted, RoleRevoked,
+    StatusChanged,
 };
 use crate::storage::{self, DataKey, TTL_EXTEND_TO, TTL_THRESHOLD};
 use crate::types::{AgentMetadata, AgentRecord, AgentStatus, Permission, ResourceId, Role};
@@ -265,8 +266,9 @@ impl AgentGuardContract {
         if record.owner != owner {
             return Err(Error::Unauthorized);
         }
-        let permission = Permission::new(role, resource_id, expires_at);
-        storage::write_permission(&env, agent_id, &permission);
+        let permission = Permission::new(role, resource_id.clone(), expires_at);
+        storage::write_permission(&env, agent_id.clone(), &permission);
+        ResourceRoleGranted { agent_id, resource_id, owner, role, expires_at }.publish(&env);
         Ok(())
     }
 
