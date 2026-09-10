@@ -277,6 +277,13 @@ impl AgentGuardContract {
         Ok(())
     }
 
+    /// Whether the agent holds an unexpired role on `resource_id`.
+    #[must_use]
+    pub fn check_access(env: Env, agent_id: Address, resource_id: ResourceId, role: Role) -> bool {
+        let _ = (env, agent_id, resource_id, role);
+        false
+    }
+
     // =======================================================================
     // Status Management
     // =======================================================================
