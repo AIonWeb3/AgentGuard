@@ -905,3 +905,25 @@ fn test_delete_permission_missing_key_is_ok() {
         ));
     });
 }
+
+#[test]
+fn test_permission_storage_read_write_delete_roundtrip() {
+    let env = Env::default();
+    let contract_id = env.register(crate::contract::AgentGuardContract, ());
+    let agent = Address::generate(&env);
+    let resource = sample_resource(&env);
+    let permission = crate::types::Permission::new(Role::Basic, resource.clone(), 123);
+    env.as_contract(&contract_id, || {
+        crate::storage::write_permission(&env, agent.clone(), &permission);
+        assert_eq!(
+            crate::storage::read_permission(&env, agent.clone(), resource.clone(), Role::Basic)
+                .unwrap(),
+            permission
+        );
+        crate::storage::delete_permission(&env, agent.clone(), resource.clone(), Role::Basic);
+        assert_eq!(
+            crate::storage::read_permission(&env, agent.clone(), resource.clone(), Role::Basic),
+            Err(Error::RoleNotFound)
+        );
+    });
+}
