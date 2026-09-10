@@ -967,3 +967,15 @@ fn test_grant_permission_missing_agent_fails() {
     let resource = sample_resource(&env);
     client.grant_permission(&owner, &agent, &resource, &Role::Premium, &future_expiry(&env));
 }
+
+#[test]
+#[should_panic(expected = "Error(Contract, #13)")]
+fn test_grant_permission_invalid_expiration_fails() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let agent = Address::generate(&env);
+    let resource = sample_resource(&env);
+    client.register_agent(&owner, &agent, &sample_metadata(&env, "RBAC"));
+    let now = crate::storage::ledger_timestamp(&env);
+    client.grant_permission(&owner, &agent, &resource, &Role::Premium, &now);
+}
