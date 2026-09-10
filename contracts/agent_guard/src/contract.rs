@@ -265,7 +265,8 @@ impl AgentGuardContract {
         if record.owner != owner {
             return Err(Error::Unauthorized);
         }
-        let _ = (resource_id, role);
+        let permission = Permission::new(role, resource_id, expires_at);
+        storage::write_permission(&env, agent_id, &permission);
         Ok(())
     }
 
