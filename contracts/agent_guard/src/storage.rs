@@ -32,7 +32,7 @@ pub enum DataKey {
     /// Owner `Address` → `Vec<Address>` of registered agents. **Persistent.**
     OwnerAgents(Address),
 
-    /// Resource permission keyed by agent, resource, and role. **Persistent.**
+    /// Resource permission keyed by agent, resource, and role. Always **persistent** (never temporary).
     Permission(PermissionKey),
 }
 
