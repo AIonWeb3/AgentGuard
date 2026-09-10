@@ -57,6 +57,11 @@ pub fn delete_permission(env: &Env, agent_id: Address, resource_id: ResourceId, 
     env.storage().persistent().remove(&key);
 }
 
+pub fn has_permission(env: &Env, agent_id: Address, resource_id: ResourceId, role: Role) -> bool {
+    let key = permission_storage_key(agent_id, resource_id, role);
+    env.storage().persistent().has(&key)
+}
+
 pub fn read_metadata(env: &Env, agent_id: Address) -> Result<AgentMetadata, Error> {
     let key = DataKey::AgentMetadata(agent_id);
     env.storage().persistent().get(&key).ok_or(Error::AgentNotFound)
