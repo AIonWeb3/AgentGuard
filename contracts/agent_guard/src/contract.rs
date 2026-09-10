@@ -34,8 +34,8 @@
 use crate::errors::Error;
 use crate::events::{
     AgentDeregistered, AgentReactivated, AgentRegistered, AgentRevoked, AgentSuspended,
-    MetadataUpdated, OwnershipTransferred, ResourceRoleGranted, RoleGranted, RoleRevoked,
-    StatusChanged,
+    MetadataUpdated, OwnershipTransferred, ResourceRoleGranted, ResourceRoleRevoked, RoleGranted,
+    RoleRevoked, StatusChanged,
 };
 use crate::storage::{self, DataKey, TTL_EXTEND_TO, TTL_THRESHOLD};
 use crate::types::{AgentMetadata, AgentRecord, AgentStatus, Permission, ResourceId, Role};
@@ -288,7 +288,8 @@ impl AgentGuardContract {
         if !storage::has_permission(&env, agent_id.clone(), resource_id.clone(), role) {
             return Err(Error::RoleNotFound);
         }
-        storage::delete_permission(&env, agent_id, resource_id, role);
+        storage::delete_permission(&env, agent_id.clone(), resource_id.clone(), role);
+        ResourceRoleRevoked { agent_id, resource_id, owner, role }.publish(&env);
         Ok(())
     }
 
