@@ -1076,3 +1076,14 @@ fn test_grant_then_revoke_permission_integration() {
         crate::storage::has_permission(&env, agent.clone(), resource.clone(), Role::Basic)
     }));
 }
+
+#[test]
+fn test_check_access_true_for_active_unexpired() {
+    let (env, client, _admin) = setup();
+    let owner = Address::generate(&env);
+    let agent = Address::generate(&env);
+    let resource = sample_resource(&env);
+    client.register_agent(&owner, &agent, &sample_metadata(&env, "RBAC"));
+    client.grant_permission(&owner, &agent, &resource, &Role::Premium, &future_expiry(&env));
+    assert!(client.check_access(&agent, &resource, &Role::Premium));
+}
