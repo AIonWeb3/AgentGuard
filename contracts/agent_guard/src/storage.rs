@@ -4,7 +4,7 @@
 //! Agent identity data uses persistent storage; admin/init flags use instance storage.
 
 use crate::errors::Error;
-use crate::types::{AgentMetadata, AgentRecord};
+use crate::types::{AgentMetadata, AgentRecord, PermissionKey};
 use soroban_sdk::{contracttype, Address, Env, Vec};
 
 /// Minimum TTL (in ledgers) before an extension is triggered.
@@ -31,6 +31,9 @@ pub enum DataKey {
 
     /// Owner `Address` → `Vec<Address>` of registered agents. **Persistent.**
     OwnerAgents(Address),
+
+    /// Resource permission keyed by agent, resource, and role. **Persistent.**
+    Permission(PermissionKey),
 }
 
 pub fn write_metadata(env: &Env, agent_id: Address, metadata: &AgentMetadata) {
