@@ -842,3 +842,16 @@ fn test_suspend_already_suspended_fails() {
     client.suspend_agent(&owner, &agent);
     client.suspend_agent(&owner, &agent);
 }
+
+#[test]
+fn test_permission_struct_instantiation() {
+    let env = Env::default();
+    let resource = soroban_sdk::Symbol::new(&env, "premium_api");
+    let permission = crate::types::Permission::new(Role::Admin, resource.clone(), 42);
+    assert_eq!(permission.role, Role::Admin);
+    assert_eq!(permission.resource_id, resource);
+    assert_eq!(permission.expires_at, 42);
+    assert!(permission.is_expired(42));
+    assert!(!permission.is_expired(41));
+    assert_eq!(Role::Admin.as_u32(), 2);
+}
