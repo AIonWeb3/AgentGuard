@@ -280,7 +280,8 @@ impl AgentGuardContract {
         resource_id: ResourceId,
         role: Role,
     ) -> Result<(), Error> {
-        let _ = (env, owner, agent_id, resource_id, role);
+        Self::authorize_owner(&env, &owner)?;
+        let _ = (agent_id, resource_id, role);
         Ok(())
     }
 
