@@ -186,6 +186,18 @@ pub struct Permission {
     pub expires_at: u64,
 }
 
+impl Permission {
+    #[must_use]
+    pub const fn new(role: Role, resource_id: ResourceId, expires_at: u64) -> Self {
+        Self { role, resource_id, expires_at }
+    }
+
+    #[must_use]
+    pub const fn is_expired(&self, now: u64) -> bool {
+        self.expires_at <= now
+    }
+}
+
 /// Composite key for a single permission entry in persistent storage.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -193,4 +205,11 @@ pub struct PermissionKey {
     pub agent_id: Address,
     pub resource_id: ResourceId,
     pub role: Role,
+}
+
+impl PermissionKey {
+    #[must_use]
+    pub const fn new(agent_id: Address, resource_id: ResourceId, role: Role) -> Self {
+        Self { agent_id, resource_id, role }
+    }
 }
