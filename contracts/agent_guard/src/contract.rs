@@ -285,7 +285,10 @@ impl AgentGuardContract {
         if record.owner != owner {
             return Err(Error::Unauthorized);
         }
-        let _ = (resource_id, role);
+        if !storage::has_permission(&env, agent_id.clone(), resource_id.clone(), role) {
+            return Err(Error::RoleNotFound);
+        }
+        storage::delete_permission(&env, agent_id, resource_id, role);
         Ok(())
     }
 
