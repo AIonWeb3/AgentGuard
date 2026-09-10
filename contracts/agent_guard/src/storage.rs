@@ -42,6 +42,16 @@ pub fn write_metadata(env: &Env, agent_id: Address, metadata: &AgentMetadata) {
     env.storage().persistent().extend_ttl(&key, TTL_THRESHOLD, TTL_EXTEND_TO);
 }
 
+pub fn read_permission(
+    env: &Env,
+    agent_id: Address,
+    resource_id: ResourceId,
+    role: Role,
+) -> Result<Permission, Error> {
+    let key = permission_storage_key(agent_id, resource_id, role);
+    env.storage().persistent().get(&key).ok_or(Error::RoleNotFound)
+}
+
 pub fn read_metadata(env: &Env, agent_id: Address) -> Result<AgentMetadata, Error> {
     let key = DataKey::AgentMetadata(agent_id);
     env.storage().persistent().get(&key).ok_or(Error::AgentNotFound)
