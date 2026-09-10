@@ -15,7 +15,10 @@
 //! credentials — not ephemeral data like price feeds or session tokens.
 
 use crate::errors::Error;
-use soroban_sdk::{contracttype, Address, Env, String, Vec};
+use soroban_sdk::{contracttype, Address, Env, String, Symbol, Vec};
+
+/// Identifier for a protected resource (API route, vault, dataset, etc.).
+pub type ResourceId = Symbol;
 
 // ---------------------------------------------------------------------------
 // Roles
