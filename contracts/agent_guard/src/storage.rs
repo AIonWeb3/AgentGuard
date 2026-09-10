@@ -4,7 +4,7 @@
 //! Agent identity data uses persistent storage; admin/init flags use instance storage.
 
 use crate::errors::Error;
-use crate::types::{AgentMetadata, AgentRecord, PermissionKey};
+use crate::types::{AgentMetadata, AgentRecord, Permission, PermissionKey, ResourceId, Role};
 use soroban_sdk::{contracttype, Address, Env, Vec};
 
 /// Minimum TTL (in ledgers) before an extension is triggered.
@@ -124,4 +124,14 @@ pub fn remove_owner_agent(env: &Env, owner: Address, agent_id: Address) {
         }
     }
     write_owner_agents(env, owner, &next);
+}
+
+const fn permission_storage_key(agent_id: Address, resource_id: ResourceId, role: Role) -> DataKey {
+    DataKey::Permission(PermissionKey::new(agent_id, resource_id, role))
+}
+
+pub fn write_permission(env: &Env, agent_id: Address, permission: &Permission) {
+    let key = permission_storage_key(agent_id, permission.resource_id.clone(), permission.role);
+    env.storage().persistent().set(&key, permission);
+    env.storage().persistent().extend_ttl(&key, TTL_THRESHOLD, TTL_EXTEND_TO);
 }
