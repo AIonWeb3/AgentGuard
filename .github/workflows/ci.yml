@@ -6,34 +6,64 @@ on:
   pull_request:
     branches: [ "main" ]
 
+# Required status checks for branch protection should include:
+# - Contract tests
+# - Contract clippy
+# - Contract fmt
+# - Contract gates
 jobs:
-  test:
-    name: Contract
+  fmt:
+    name: Contract fmt
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          components: rustfmt
+      - name: Format
+        run: cargo fmt --all -- --check
 
+  clippy:
+    name: Contract clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
           targets: wasm32v1-none
-          components: clippy, rustfmt
-
+          components: clippy
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
-
-      - name: Format
-        run: cargo fmt --all -- --check
-
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
 
+  test:
+    name: Contract tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: wasm32v1-none
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
       - name: Build
         run: cargo build --target wasm32v1-none --release
-
       - name: Run tests
         run: cargo test
+
+  contract-gates:
+    name: Contract gates
+    runs-on: ubuntu-latest
+    needs: [fmt, clippy, test]
+    steps:
+      - run: echo "cargo fmt, clippy -D warnings, and cargo test passed"
 
   sdk:
     name: SDK
