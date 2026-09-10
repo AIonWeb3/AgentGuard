@@ -109,3 +109,14 @@ pub struct ResourceRoleGranted {
     pub role: Role,
     pub expires_at: u64,
 }
+
+#[contractevent]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ResourceRoleRevoked {
+    #[topic]
+    pub agent_id: Address,
+    #[topic]
+    pub resource_id: ResourceId,
+    pub owner: Address,
+    pub role: Role,
+}
